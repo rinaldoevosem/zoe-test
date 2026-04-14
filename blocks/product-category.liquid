@@ -1,0 +1,79 @@
+{% assign block_settings = block.settings %}
+
+{% assign main_collection = product.collections.first %}
+
+{% for collection in product.collections %}
+  {% if collection.handle contains 'engagement' %}
+    {% assign main_collection = collection %}
+  {% endif %}
+{% endfor %}
+
+{% if main_collection %}
+  <div 
+    class="product-category-block spacing-style"
+    style="
+      {% render 'spacing-style', settings: block_settings %}
+    "
+    {{ block.shopify_attributes }}
+  >
+
+    <div class="product-category-text">
+      {{ main_collection.title }}
+    </div>
+
+  </div>
+{% endif %}
+
+<style>
+.product-category-block{
+  font-family: 'Jost', sans-serif;
+}
+
+.product-category-text{
+  font-weight:500;
+  font-size:13px;
+  line-height:120%;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:#272A4C;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Product Category",
+  "tag": null,
+  "class": "product-category",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 8
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Category"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,158 @@
+{% assign block_settings = block.settings %}
+
+<div 
+  class="financing-block spacing-style"
+  style="
+    {% render 'spacing-style', settings: block_settings %}
+  "
+  {{ block.shopify_attributes }}
+>
+  <span class="financing-text">
+    {{ block_settings.text_prefix }}
+  </span>
+
+  <strong class="financing-price">
+    {{ block_settings.price }}
+  </strong>
+
+  <span class="financing-text">
+    {{ block_settings.text_suffix }}
+  </span>
+
+  {% if block_settings.show_logo and block_settings.logo %}
+    <img 
+      src="{{ block_settings.logo | image_url: width: 80 }}" 
+      alt="logo"
+      class="financing-logo"
+    >
+  {% endif %}
+
+  {% if block_settings.link_text != blank %}
+    <a href="{{ block_settings.link }}" class="financing-link">
+      {{ block_settings.link_text }}
+    </a>
+  {% endif %}
+</div>
+
+<style>
+    .financing-block {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Jost', sans-serif;
+  font-size: 13px;
+  line-height: 150%;
+  color: #737373;
+  width: 100%;
+}
+
+.financing-text {
+  font-weight: 400;
+  width: 100%;
+  max-width: fit-content;
+}
+
+.financing-price {
+  font-weight: 400;
+  color: #000; /* opcional, para destacar el precio */
+}
+
+.financing-logo {
+  max-width: 40px;
+  height: auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.financing-link {
+  width: 100%;
+  font-size: 13px;
+  text-decoration: underline;
+  color: #737373;
+  margin-top: 2px;
+}
+
+.financing-link:hover {
+  opacity: 0.7;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Financing",
+  "tag": null,
+  "class": "financing",
+  "settings": [
+    {
+      "type": "text",
+      "id": "text_prefix",
+      "label": "Texto inicio",
+      "default": "Starting at"
+    },
+    {
+      "type": "text",
+      "id": "price",
+      "label": "Precio",
+      "default": "$28/mo"
+    },
+    {
+      "type": "text",
+      "id": "text_suffix",
+      "label": "Texto medio",
+      "default": "with"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_logo",
+      "label": "Mostrar logo",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "link_text",
+      "label": "Texto link",
+      "default": "Prequalify now"
+    },
+    {
+      "type": "url",
+      "id": "link",
+      "label": "Link"
+    },
+
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "Top",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "Bottom",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    }
+  ],
+  "presets": [
+    {
+      "name": "Financing"
+    }
+  ]
+}
+{% endschema %}

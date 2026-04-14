@@ -1,0 +1,202 @@
+<section 
+  class="follow-ticker-section"
+  style="background: {{ section.settings.bg_color }}">
+
+  <div class="follow-ticker-container">
+
+    {% if section.settings.title != blank %}
+      <h2 class="follow-ticker-title">
+        {{ section.settings.title }}
+      </h2>
+    {% endif %}
+
+    <!-- TICKER -->
+    <div class="follow-ticker">
+      <div class="follow-ticker-track">
+
+        {% for i in (1..4) %}
+          {% for block in section.blocks %}
+            {% if block.type == 'image' %}
+              <div class="follow-ticker-item">
+                {% if block.settings.link != blank %}
+                  <a href="{{ block.settings.link }}" target="_blank">
+                {% endif %}
+
+                <img
+                  src="{{ block.settings.image | image_url: width: 400 }}"
+                  alt="instagram image"
+                  loading="lazy">
+
+                {% if block.settings.link != blank %}
+                  </a>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+
+      </div>
+    </div>
+
+    {% if section.settings.button_text != blank %}
+      <a href="{{ section.settings.button_link }}" class="follow-ticker-btn">
+        {{ section.settings.button_text }}
+      </a>
+    {% endif %}
+
+  </div>
+</section>
+
+<style>
+.follow-ticker-section{
+  padding:60px 0;
+  overflow:hidden;
+}
+
+.follow-ticker-container{
+  max-width:1380px;
+  margin:auto;
+  padding:0 20px;
+  text-align:center;
+}
+
+.follow-ticker-title{
+  font-family: MinervaModern, serif;
+  font-size:32px;
+  margin-bottom:40px;
+}
+
+/* TICKER */
+.follow-ticker{
+  overflow:hidden;
+  width:100%;
+}
+
+.follow-ticker-track{
+  display:flex;
+  gap:10px;
+  width:max-content;
+  animation:followTicker 50s linear infinite;
+}
+
+.follow-ticker-item{
+  flex:0 0 auto;
+}
+
+/* 🔥 IMPORTANTE: desktop sin border radius */
+.follow-ticker-item img{
+  width:180px;
+  height:180px;
+  object-fit:cover;
+  display:block;
+  border-radius:0;
+  transition:transform 0.4s ease;
+}
+
+/* hover sutil premium */
+.follow-ticker-item img:hover{
+  transform:scale(1.05);
+}
+
+@keyframes followTicker{
+  0%{
+    transform:translateX(0);
+  }
+  100%{
+    transform:translateX(-50%);
+  }
+}
+
+/* BOTÓN */
+.follow-ticker-btn{
+  display:inline-block;
+  margin-top:40px;
+  padding:10px 32px;
+  border:1px solid #272A4C;
+  text-decoration:none;
+  letter-spacing:1px;
+  font-weight: 500;
+    font-size: 14px;
+    line-height: 120%;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #272A4C;
+}
+
+/* 📱 MOBILE */
+@media(max-width:768px){
+
+  .follow-ticker-title{
+    font-size:26px;
+  }
+
+  .follow-ticker-track{
+    gap:10px;
+  }
+
+  .follow-ticker-item img{
+    width:130px;
+    height:130px;
+  }
+
+  .follow-ticker-section {
+    padding: 30px 0;
+}
+
+}
+</style>
+
+{% schema %}
+{
+  "name": "Follow Ticker",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Follow Us"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Texto botón",
+      "default": "FOLLOW US @TUCUENTA"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Link botón"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Color fondo",
+      "default": "#F5F5F5"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "image",
+      "name": "Imagen",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Imagen"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link (opcional)"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 10,
+  "presets": [
+    {
+      "name": "Follow Ticker"
+    }
+  ]
+}
+{% endschema %}

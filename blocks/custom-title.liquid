@@ -1,0 +1,109 @@
+{% schema %}
+{
+  "name": "Custom Title",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "What Our Client Say"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Color del texto",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_desktop",
+      "label": "Padding superior (desktop)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_desktop",
+      "label": "Padding inferior (desktop)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "label": "Padding superior (mobile)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "label": "Padding inferior (mobile)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "unit": "px",
+      "default": 24
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Title"
+    }
+  ]
+}
+{% endschema %}
+
+<section 
+  class="custom-title-section"
+  style="
+    --padding-top-desktop: {{ section.settings.padding_top_desktop }}px;
+    --padding-bottom-desktop: {{ section.settings.padding_bottom_desktop }}px;
+    --padding-top-mobile: {{ section.settings.padding_top_mobile }}px;
+    --padding-bottom-mobile: {{ section.settings.padding_bottom_mobile }}px;
+    --title-color: {{ section.settings.title_color }};
+  "
+>
+  <h2 class="custom-title">
+    {{ section.settings.title }}
+  </h2>
+</section>
+
+<style>
+.custom-title-section {
+  padding-top: var(--padding-top-desktop);
+  padding-bottom: var(--padding-bottom-desktop);
+}
+
+.custom-title {
+  font-family: "Minerva Modern", sans-serif !important;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 110%;
+  letter-spacing: 0%;
+  text-align: center;
+  color: var(--title-color);
+  margin: 0;
+}
+
+/* MOBILE */
+@media screen and (max-width: 768px) {
+  .custom-title-section {
+    padding-top: var(--padding-top-mobile);
+    padding-bottom: var(--padding-bottom-mobile);
+  }
+
+  .custom-title {
+    font-size: 24px; 
+  }
+}
+</style>

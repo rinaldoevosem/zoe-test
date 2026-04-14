@@ -1,0 +1,223 @@
+{% schema %}
+{
+  "name": "FAQ Accordion",
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Título",
+      "default": "Frequently Asked Questions"
+    },
+    {
+      "type": "checkbox",
+      "id": "first_open",
+      "label": "Abrir primer item por defecto",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding top",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding bottom",
+      "default": 80
+    }
+  ],
+  "blocks": [
+    {
+      "type": "faq_item",
+      "name": "Pregunta",
+      "settings": [
+        {
+          "type": "text",
+          "id": "question",
+          "label": "Pregunta",
+          "default": "Is the center diamond included?"
+        },
+        {
+          "type": "textarea",
+          "id": "answer",
+          "label": "Respuesta",
+          "default": "No. This ring is sold as a setting only..."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "FAQ Accordion",
+      "blocks": [
+        { "type": "faq_item" },
+        { "type": "faq_item" },
+        { "type": "faq_item" }
+      ]
+    }
+  ]
+}
+{% endschema %}
+
+<section class="faq-section-{{ section.id }}">
+  <div class="faq-container">
+    
+    {% if section.settings.title != blank %}
+      <h2 class="faq-title">{{ section.settings.title }}</h2>
+    {% endif %}
+
+    <div class="faq-list">
+      {% for block in section.blocks %}
+        <div class="faq-item ">
+          
+          <button class="faq-question">
+            <span class="icon"></span>
+            {{ block.settings.question }}
+          </button>
+
+          <div class="faq-answer">
+            <p>{{ block.settings.answer }}</p>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</section>
+
+<style>
+.faq-section-{{ section.id }} {
+  padding-top: {{ section.settings.padding_top }}px;
+  padding-bottom: {{ section.settings.padding_bottom }}px;
+  background: #E6F0F8;
+}
+
+.faq-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* TITLE */
+.faq-title {
+  font-family: 'MinervaModern', serif;
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 110%;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+/* LIST */
+.faq-item {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* QUESTION */
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 20px 0;
+  cursor: pointer;
+
+  font-family: 'Jost', sans-serif;
+  font-size: 16px;
+  line-height: 150%;
+  color: #121212;
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.faq-question .icon {
+  width: 12px;
+  height: 12px;
+  position: relative;
+}
+
+/* líneas del + */
+.faq-question .icon::before,
+.faq-question .icon::after {
+  content: "";
+  position: absolute;
+  background: #121212;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* línea horizontal */
+.faq-question .icon::before {
+  width: 12px;
+  height: 2px;
+  top: 5px;
+  left: 0;
+}
+
+/* línea vertical */
+.faq-question .icon::after {
+  width: 2px;
+  height: 12px;
+  left: 5px;
+  top: 0;
+}
+
+/* estado abierto → rota y desaparece suavemente */
+.faq-item.active .icon::after {
+  transform: rotate(90deg);
+  opacity: 0;
+}
+
+/* ANSWER */
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.faq-answer p {
+  margin: 0 0 20px;
+
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  line-height: 150%;
+  color: #737373;
+}
+
+/* OPEN STATE */
+.faq-item.active .faq-answer {
+  max-height: 300px;
+}
+
+/* MOBILE */
+@media screen and (max-width: 768px) {
+  .faq-title {
+    font-size: 24px;
+  }
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const items = document.querySelectorAll(".faq-section-{{ section.id }} .faq-item");
+
+  items.forEach(item => {
+    const button = item.querySelector(".faq-question");
+
+    button.addEventListener("click", () => {
+      item.classList.toggle("active");
+    });
+  });
+});
+</script>

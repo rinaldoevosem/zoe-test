@@ -1,0 +1,70 @@
+{% assign block_settings = block.settings %}
+
+<div 
+  class="actions-bar spacing-style"
+  style="{% render 'spacing-style', settings: block_settings %}"
+  {{ block.shopify_attributes }}
+>
+
+  {% content_for 'blocks' %}
+
+</div>
+
+<style>
+.actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #E9EFF5;
+  padding: 16px 24px;
+}
+.content-cards {
+width:100%;
+max-width: 279px;
+}
+#shopify-block-AYnZPUHFWQlBSNmUxT__action_wVfgdW,
+#shopify-block-ANHlBRUNhYmk1ZG90S__action_iQ3CQK,
+#shopify-block-AYytPdWNIa25jMXlqd__action_e7jTTx {
+  width: 100%;
+  max-width: 93px;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Actions Bar",
+  "tag": null,
+  "class": "actions-bar-wrapper",
+  "blocks": [
+    {
+      "type": "_action"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Actions Bar",
+      "blocks": {
+        "chat": {
+          "type": "_action",
+          "settings": {
+            "text": "Chat"
+          }
+        },
+        "share1": {
+          "type": "_action",
+          "settings": {
+            "text": "Share"
+          }
+        },
+        "share2": {
+          "type": "_action",
+          "settings": {
+            "text": "Share"
+          }
+        }
+      },
+      "block_order": ["chat", "share1", "share2"]
+    }
+  ]
+}
+{% endschema %}

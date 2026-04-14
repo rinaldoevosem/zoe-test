@@ -1,0 +1,90 @@
+{% assign product = closest.product %}
+
+{% assign metal_option_index = nil %}
+
+{% for option in product.options_with_values %}
+  {% assign option_name = option.name | downcase %}
+  
+  {% if option_name == 'metal' %}
+    {% assign metal_option_index = forloop.index0 %}
+  {% endif %}
+{% endfor %}
+
+{% if metal_option_index != nil %}
+  <div class="card-variant-metals">
+
+    {% assign rendered_values = '' %}
+
+    {% for variant in product.variants %}
+      {% assign value = variant.options[metal_option_index] %}
+
+      {% unless rendered_values contains value %}
+
+        {% assign value_down = value | downcase %}
+
+        {% assign metal_class = '' %}
+        {% if value_down contains 'yellow' %}
+          {% assign metal_class = 'yellow-gold' %}
+        {% elsif value_down contains 'white' %}
+          {% assign metal_class = 'white-gold' %}
+        {% elsif value_down contains 'rose' %}
+          {% assign metal_class = 'rose-gold' %}
+        {% elsif value_down contains 'platinum' or value_down contains 'pt' %}
+          {% assign metal_class = 'platinum' %}
+        {% endif %}
+
+        <span class="card-metal-swatch {{ metal_class }}"></span>
+
+        {% assign rendered_values = rendered_values | append: value %}
+      {% endunless %}
+    {% endfor %}
+
+  </div>
+{% endif %}
+
+<style>
+.card-variant-metals{
+  display:flex;
+  gap:6px;
+  justify-content: center;
+}
+
+.card-metal-swatch{
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  border:1px solid #E5E5E5;
+}
+
+/* gradientes */
+
+.card-metal-swatch.white-gold{
+  background: linear-gradient(125deg,#e3e3e3,#ffffff,#e3e3e3);
+}
+
+.card-metal-swatch.yellow-gold{
+  background: linear-gradient(125deg,#FFDD63,#fff3bf,#FFDD63);
+}
+
+.card-metal-swatch.rose-gold{
+  background: linear-gradient(125deg,#F9DED0,#FCF6ED,#F9DED0);
+}
+
+.card-metal-swatch.platinum{
+  background: linear-gradient(125deg,#DCDCDC,#f5f5f5,#DCDCDC);
+}
+</style>
+
+{% schema %}
+{
+  "name": "Card Variant Metals",
+  "tag": null,
+  "class": "card-variant-metals-block",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Card Variant Metals"
+    }
+  ]
+}
+{% endschema %}

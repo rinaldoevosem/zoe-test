@@ -1,0 +1,270 @@
+<section class="ddv2-section" style="background: {{ section.settings.bg_color }};">
+  <div class="ddv2-wrapper">
+        <!-- LEFT IMAGE -->
+    <div class="ddv2-image">
+      {% if section.settings.image != blank %}
+        <img 
+          src="{{ section.settings.image | image_url: width: 1000 }}" 
+          alt="image"
+          loading="lazy"
+        >
+      {% endif %}
+    </div>
+
+    <!-- RIGHT CONTENT -->
+    <div class="ddv2-content">
+
+      {% if section.settings.subtitle != blank %}
+        <p class="ddv2-subtitle">
+          {{ section.settings.subtitle }}
+        </p>
+      {% endif %}
+
+      {% if section.settings.title != blank %}
+        <h2 class="ddv2-title">
+          {{ section.settings.title }}
+        </h2>
+      {% endif %}
+
+      {% if section.settings.text != blank %}
+        <p class="ddv2-text">
+          {{ section.settings.text }}
+        </p>
+      {% endif %}
+
+      {% if section.blocks.size > 0 %}
+        <ul class="ddv2-list">
+          {% for block in section.blocks %}
+            <li class="ddv2-item">
+              <span class="ddv2-diamond"></span>
+              <span>{{ block.settings.text }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if section.settings.button_text != blank %}
+        <a href="{{ section.settings.button_link }}" class="ddv2-btn go-to-buy">
+          {{ section.settings.button_text }}
+        </a>
+      {% endif %}
+
+    </div>
+
+  </div>
+</section>
+
+<style>
+.ddv2-section { width: 100%; }
+
+.ddv2-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+.ddv2-content {
+  background: {{ section.settings.content_bg }};
+  color: {{ section.settings.text_color }};
+  padding: 50px 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ddv2-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.ddv2-subtitle {
+  font-family: 'Jost', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.ddv2-title {
+  font-family: 'MinervaModern', serif;
+  margin: 60px 0 24px;
+}
+
+.ddv2-text {
+  font-family: 'Jost', sans-serif;
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 24px;
+  max-width: 400px;
+  color: #737373;
+}
+
+.ddv2-list { 
+  list-style: none; 
+  padding: 0; 
+  margin-bottom: 30px; 
+  margin-top: 0;
+}
+
+.ddv2-item {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  align-items: center;
+  font-weight: 500;
+}
+
+.ddv2-diamond {
+  width: 12px;
+  height: 12px;
+  background: {{ section.settings.diamond_color }};
+  transform: rotate(45deg);
+}
+
+.ddv2-btn {
+  padding: 20px 32px;
+  background: {{ section.settings.button_bg }};
+  color: {{ section.settings.button_text_color }};
+  text-decoration: none;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  max-width: fit-content;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .ddv2-diamond {
+    width: 10px;
+    height: 10px;
+  }
+
+  .ddv2-wrapper { 
+    grid-template-columns: 1fr; 
+  }
+
+  .ddv2-content { 
+    padding: 30px 20px;
+    order: 1; 
+  }
+
+  .ddv2-image { 
+    order: 2; 
+  }
+
+  .ddv2-title { 
+    font-size: 32px;
+    margin-top: 30px;
+    margin-bottom: 20px;
+  }
+
+  .ddv2-image img { 
+    object-fit: contain; 
+  }
+}
+</style>
+
+{% schema %}
+{
+  "name": "Design Details V2",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background section",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "content_bg",
+      "label": "Background content",
+      "default": "#2F3352"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Design details"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Why This Ring"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Description",
+      "default": "A braided band adds structure and detail while keeping the design balanced and wearable."
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Right image"
+    },
+    {
+      "type": "color",
+      "id": "diamond_color",
+      "label": "Diamond color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Add to bag"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "color",
+      "id": "button_bg",
+      "label": "Button background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#2F3352"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "bullet",
+      "name": "Bullet",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Bullet text"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Design Details V2",
+      "blocks": [
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "bullet" }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,54 @@
+<div class="action-item">
+
+  {% if block.settings.icon %}
+    <img 
+      src="{{ block.settings.icon | image_url: width: 40 }}" 
+      alt="icon"
+      class="action-icon"
+    >
+  {% endif %}
+
+  <span class="action-text">
+    {{ block.settings.text }}
+  </span>
+
+</div>
+
+<style>
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.action-text {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: #272A4C;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Action",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "icon",
+      "label": "Icono"
+    },
+    {
+      "type": "text",
+      "id": "text",
+      "label": "Texto",
+      "default": "Chat"
+    }
+  ]
+}
+{% endschema %}

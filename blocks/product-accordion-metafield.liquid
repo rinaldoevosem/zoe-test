@@ -1,0 +1,224 @@
+{% assign accordions = product.metafields.custom.accordion_info.value %}
+
+{% if accordions != blank %}
+
+  <div class="product-accordion-metafield">
+
+    {% for item in accordions %}
+
+      <details class="custom-accordion-item" {{ block.shopify_attributes }}>
+        
+        <summary class="custom-accordion-header">
+          {{ item.accordion_title }}
+          <span class="accordion-icon"></span>
+        </summary>
+
+        <div class="custom-accordion-content">
+
+          {% assign descriptions = item.accordion_description.value %}
+
+          {% if descriptions != blank %}
+
+{%- comment -%}
+TEXTO NORMAL
+{%- endcomment -%}
+
+{% for desc in descriptions %}
+  {% if desc.normal_text != blank %}
+    <div class="accordion-description">
+      <span class="formatted-text">
+{{ desc.normal_text | strip }}
+    </span>
+    </div>
+  {% endif %}
+{% endfor %}
+
+
+{%- comment -%}
+BULLETS (UNA SOLA VEZ)
+{%- endcomment -%}
+
+{% assign has_bullets = false %}
+
+{% for desc in descriptions %}
+  {% if desc.bullet_text != blank %}
+    {% assign has_bullets = true %}
+  {% endif %}
+{% endfor %}
+
+{% if has_bullets %}
+  <div class="accordion-bullets">
+
+    {% for desc in descriptions %}
+      {% if desc.bullet_text != blank %}
+        <div class="accordion-bullet">
+
+          {% if desc.bullet_icon %}
+            <img 
+              src="{{ desc.bullet_icon | image_url: width: 40 }}" 
+              class="accordion-bullet-icon"
+            >
+          {% endif %}
+
+          <span class="accordion-bullet-text">
+            {{ desc.bullet_text }}
+          </span>
+
+        </div>
+      {% endif %}
+    {% endfor %}
+
+  </div>
+{% endif %}
+
+          {% endif %}
+
+        </div>
+
+      </details>
+
+    {% endfor %}
+
+  </div>
+
+{% endif %}
+
+
+<style>
+.product-accordion-metafield {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ITEM */
+.custom-accordion-item {
+  border-bottom: 1px solid #E5E5E5;
+}
+
+/* HEADER */
+.custom-accordion-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-family: "Minerva Modern", serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: #121212;
+  padding: 18px 0;
+  cursor: pointer;
+}
+
+/* ICON */
+.accordion-icon {
+  width: 14px;
+  height: 14px;
+  position: relative;
+}
+
+/* flecha */
+.accordion-icon::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid #121212;
+  border-bottom: 1.5px solid #121212;
+  transform: rotate(45deg);
+  transition: transform 0.25s ease;
+}
+
+/* open */
+.custom-accordion-item[open] .accordion-icon::before {
+  transform: rotate(-135deg);
+  top: 5px;
+}
+
+/* CONTENT */
+.custom-accordion-content {
+  padding-bottom: 20px;
+}
+
+/* TEXT */
+.accordion-description {
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #737373;
+  margin-bottom: 16px;
+  white-space: pre-line; 
+}
+
+/* BULLETS */
+.accordion-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.accordion-bullet {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accordion-bullet-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.accordion-bullet-text {
+  font-family: 'Jost', sans-serif;
+  font-size: 14px;
+  color: #2F3A5A;
+}
+.formatted-text strong {
+  font-weight: 500;
+  color: #121212;
+}
+
+.custom-accordion-item {
+  border-bottom: 1px solid #E5E5E5;
+  margin: 0; 
+}
+
+.custom-accordion-item summary {
+  margin: 0;
+}
+
+.custom-accordion-content {
+  padding: 0 0 16px 0;
+}
+
+.accordion-description {
+        display: flex;
+    align-items: start;
+    max-height: fit-content;
+  margin-top: 0;
+}
+</style>
+
+<script>
+document.querySelectorAll('.formatted-text').forEach(el => {
+  el.innerHTML = el.innerHTML.replace(
+    /(^|\n)([^:\n]+):/g,
+    '$1<strong>$2:</strong>'
+  );
+});
+</script>
+
+{% schema %}
+{
+  "name": "Product Accordion",
+  "tag": null,
+  "class": "product-accordion-metafield-block",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Product Accordion"
+    }
+  ]
+}
+{% endschema %}

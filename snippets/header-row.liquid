@@ -1,0 +1,116 @@
+{% doc %}
+  Renders a responsive header row with three columns (left, center, right).
+  Organizes header elements based on their configured position and row placement
+
+  @param {string} row - The row identifier ('top' or 'bottom')
+  @param {string} order - Comma-separated list of item names defining the order of elements
+  @param {object} settings - Section settings object containing position and row settings for each item
+  @param {string} [first] - Optional captured HTML for the first item (typically drawer menu for top row)
+  @param {string} [logo] - Captured HTML for the logo element
+  @param {string} [menu] - Captured HTML for the menu navigation
+  @param {string} [actions] - Captured HTML for header actions (cart, account buttons, etc.)
+  @param {string} [localization] - Captured HTML for language/country selector
+  @param {string} [search] - Captured HTML for search input
+  @param {string} [drawer_search] - Captured HTML for drawer-based search
+{% enddoc %}
+
+{%- liquid
+  assign order = order | split: ','
+  assign left = ''
+  assign center = ''
+  assign right = ''
+
+  if first != blank
+    assign left = 'first '
+  endif
+
+  for item in order
+    assign column_key = item | append: '_position'
+    assign row_key = item | append: '_row'
+    assign item_row = settings[row_key] | default: 'top'
+    assign item_column = settings[column_key] | default: 'left'
+
+    case item
+      when 'actions'
+        assign item_column = 'right'
+    endcase
+
+    if item_row == row
+      case item_column
+        when 'left'
+          assign left = left | append: item | append: ' '
+        when 'center'
+          assign center = center | append: item | append: ' '
+        else
+          assign right = right | append: item | append: ' '
+      endcase
+    endif
+  endfor
+
+  assign columns = 'left,center,right' | split: ','
+-%}
+
+{%- for column in columns -%}
+  {%- capture items_for_column -%}
+    {% case column %}
+      {% when 'left' %}
+        {{ left }}
+      {% when 'center' %}
+        {{ center }}
+      {% else %}
+        {{ right }}
+    {% endcase %}
+  {%- endcapture -%}
+
+  {%- assign items_array = items_for_column | strip | split: ' ' | compact -%}
+
+  {%- if items_array.size > 0 -%}
+    <div
+      class="header__column header__column--{{ column }}"
+      data-testid="header-{{ row }}-{{ column }}"
+    >
+      {% if column == 'left' and row == 'top' %}
+<div class="header-contact">
+      <span class="phone-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 
+        19.79 19.79 0 0 1-8.63-3.07 
+        19.5 19.5 0 0 1-6-6 
+        19.79 19.79 0 0 1-3.07-8.67 
+        A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 
+        12.84 12.84 0 0 0 .7 2.81 
+        2 2 0 0 1-.45 2.11L8.09 9.91 
+        a16 16 0 0 0 6 6l1.27-1.27 
+        a2 2 0 0 1 2.11-.45 
+        12.84 12.84 0 0 0 2.81.7 
+        A2 2 0 0 1 22 16.92z"/>
+      </svg>
+    </span>
+  <span><strong>Naperville:</strong> (630) 637-1500</span>
+  <span><strong>Lincoln P.:</strong> (312) 943-2222</span>
+</div>
+{% endif %}
+
+      {% for key in items_array %}
+        {% unless key == blank %}
+          {% case key %}
+            {% when 'first' %}
+              {{ first }}
+            {% when 'logo' %}
+              {{ logo }}
+            {% when 'menu' %}
+              {{ menu }}
+            {% when 'localization' %}
+              {{ localization }}
+            {% when 'search' %}
+              {{ search }}
+            {% when 'drawer_search' %}
+              {{ drawer_search }}
+            {% when 'actions' %}
+              {{ actions }}
+          {% endcase %}
+        {% endunless %}
+      {% endfor %}
+    </div>
+  {%- endif -%}
+{%- endfor -%}

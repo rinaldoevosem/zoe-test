@@ -1,0 +1,321 @@
+<section class="design-details-section" style="background: {{ section.settings.bg_color }};">
+  <div class="design-details-wrapper">
+
+    <!-- LEFT CONTENT -->
+    <div class="design-details-content">
+
+      {% if section.settings.subtitle != blank %}
+        <p class="design-details-subtitle">
+          {{ section.settings.subtitle }}
+        </p>
+      {% endif %}
+
+      {% if section.settings.title != blank %}
+        <h2 class="design-details-title">
+          {{ section.settings.title }}
+        </h2>
+      {% endif %}
+
+      {% if section.settings.text != blank %}
+        <p class="design-details-text">
+          {{ section.settings.text }}
+        </p>
+      {% endif %}
+
+      {% if section.blocks.size > 0 %}
+        <ul class="design-details-list">
+          {% for block in section.blocks %}
+            <li class="design-details-item">
+              <span class="diamond"></span>
+              <span>{{ block.settings.text }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if section.settings.button_text != blank %}
+        <a href="{{ section.settings.button_link }}" class="design-details-btn go-to-buy">
+          {{ section.settings.button_text }}
+        </a>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT IMAGE -->
+    <div class="design-details-image">
+      {% if section.settings.image != blank %}
+        <img 
+          src="{{ section.settings.image | image_url: width: 1000 }}" 
+          alt="image"
+          loading="lazy"
+        >
+      {% endif %}
+    </div>
+
+  </div>
+</section>
+
+<style>
+.design-details-section {
+  width: 100%;
+}
+
+/* ===== LAYOUT ===== */
+.design-details-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+}
+
+/* LEFT SIDE */
+.design-details-content {
+  background: {{ section.settings.content_bg }};
+  color: {{ section.settings.text_color }};
+  padding: 50px 110px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* RIGHT IMAGE */
+.design-details-image {
+  display: block;
+}
+
+.design-details-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+/* ===== TYPOGRAPHY ===== */
+
+/* SUBTITLE */
+.design-details-subtitle {
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 120%;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+/* TITLE */
+.design-details-title {
+  font-family: 'MinervaModern', serif;
+  font-weight: 400;
+  font-size: 48px;
+  line-height: 110%;
+  margin-top: 60px;
+  margin-bottom: 24px;
+}
+
+/* TEXT */
+.design-details-text {
+  font-family: 'Jost', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 150%;
+  margin-top: 0;
+  margin-bottom: 24px;
+  max-width: 400px;
+}
+
+/* ===== LIST ===== */
+.design-details-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px;
+}
+
+.design-details-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 150%;
+}
+
+/* DIAMOND */
+.diamond {
+  width: 12px;
+  height: 12px;
+  background: {{ section.settings.diamond_color }};
+  transform: rotate(45deg);
+  display: inline-block;
+}
+
+/* ===== BUTTON ===== */
+.design-details-btn {
+  display: inline-block;
+  padding: 20px 32px;
+  background: {{ section.settings.button_bg }};
+  color: {{ section.settings.button_text_color }};
+  text-decoration: none;
+  font-family: 'Jost', sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 120%;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  max-width: fit-content;
+}
+
+@media (max-width: 1080px) {
+.design-details-content {
+    padding: 40px 70px;
+}
+}
+
+/* ===== MOBILE ===== */
+@media screen and (max-width: 768px) {
+  .diamond {
+  width: 10px;
+  height: 10px;
+}
+  .design-details-wrapper {
+    grid-template-columns: 1fr;
+    min-height: auto; 
+  }
+
+  .design-details-content {
+    padding: 30px 20px;
+    justify-content: flex-start; 
+  }
+
+  .design-details-title {
+    font-size: 32px;
+    margin-top: 30px;
+     margin-bottom: 20px;
+  }
+
+  .design-details-text {
+    font-size: 14px;
+  }
+
+  .design-details-item {
+    font-size: 14px;
+    gap: 8px;
+  }
+
+  .design-details-image {
+    height: auto;
+    order: 2;
+  }
+
+  .design-details-image img {
+    height: auto;
+    object-fit: contain;
+  }
+}
+
+</style>
+
+{% schema %}
+{
+  "name": "Design Details",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background section",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "content_bg",
+      "label": "Background content",
+      "default": "#2F3352"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Design details"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Why This Ring"
+    },
+    {
+      "type": "textarea",
+      "id": "text",
+      "label": "Description",
+      "default": "A braided band adds structure and detail while keeping the design balanced and wearable."
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Right image"
+    },
+    {
+      "type": "color",
+      "id": "diamond_color",
+      "label": "Diamond color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Add to bag"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "color",
+      "id": "button_bg",
+      "label": "Button background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#2F3352"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "bullet",
+      "name": "Bullet",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Bullet text"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Design Details",
+      "blocks": [
+        { "type": "bullet" },
+        { "type": "bullet" },
+        { "type": "bullet" }
+      ]
+    }
+  ]
+}
+{% endschema %}

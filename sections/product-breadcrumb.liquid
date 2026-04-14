@@ -1,0 +1,76 @@
+{% assign current_collection = collection %}
+
+{% if current_collection == nil and product.collections.size > 0 %}
+  {% assign current_collection = product.collections.first %}
+{% endif %}
+
+<div class="product-breadcrumb">
+  
+  <!-- HOME -->
+  <a href="{{ routes.root_url }}">Home</a>
+
+  {% if current_collection %}
+    <span class="breadcrumb-separator">/</span>
+
+    <!-- CATEGORY -->
+    <a href="{{ current_collection.url }}">
+      {{ current_collection.title }}
+    </a>
+  {% endif %}
+
+  <span class="breadcrumb-separator">/</span>
+
+  <!-- PRODUCT -->
+  <span class="breadcrumb-product">
+    {{ product.title }}
+  </span>
+
+</div>
+
+<style>
+.product-breadcrumb{
+  font-family: 'Jost', sans-serif;
+  font-weight:400;
+  font-size:13px;
+  line-height:150%;
+  letter-spacing:0;
+  vertical-align:middle;
+  color:#737373;
+
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex-wrap:wrap;
+
+  padding:14px 30px;
+}
+
+.product-breadcrumb a{
+  color:#737373;
+  text-decoration:none;
+}
+
+.product-breadcrumb a:hover{
+  text-decoration:underline;
+}
+
+.breadcrumb-separator{
+  color:#737373;
+}
+
+.breadcrumb-product{
+  color:#737373;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Product Breadcrumb",
+  "settings": [],
+  "presets": [
+    {
+      "name": "Product Breadcrumb"
+    }
+  ]
+}
+{% endschema %}

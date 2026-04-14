@@ -1,0 +1,318 @@
+.custom-variant {
+    border: 0;
+}
+
+.custom-variant legend {
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+/* GRID */
+.variant-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ITEM BASE */
+.variant-item {
+  position: relative;
+  cursor: pointer;
+}
+
+.variant-item input {
+  display: none;
+}
+
+/* DEFAULT PILL */
+.variant-item .text {
+  padding: 10px 16px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+/* SHAPE (IMAGENES) */
+.variant-shape img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  padding: 5px;
+  object-fit: fill;
+}
+
+/* METAL (COLORES) */
+/* BASE */
+.color-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid #E5E5E5;
+  overflow: hidden;
+}
+
+/* TEXTO */
+.metal-label {
+  position: relative;
+  z-index: 2;
+  color: #6b6b6b;
+}
+
+/*  WHITE GOLD */
+.color-swatch.white-gold {
+  background:
+    linear-gradient(
+      125deg,
+      #e3e3e3 0%,
+      #f6f6f6 28%,
+      #ffffff 42%,
+      #f6f6f6 58%,
+      #e3e3e3 100%
+    );
+}
+
+/*  YELLOW GOLD */
+.color-swatch.yellow-gold {
+  background:
+    linear-gradient(
+      125deg,
+      #FFDD63 0%,
+      #FEE793 28%,
+      #fff3bf 42%,
+      #FEE793 58%,
+      #FFDD63 100%
+    );
+}
+
+/*  ROSE GOLD */
+.color-swatch.rose-gold {
+  background:
+    linear-gradient(
+      125deg,
+      #F9DED0 0%,
+      #F9E4D9 28%,
+      #FCF6ED 42%,
+      #F9E4D9 58%,
+      #F9DED0 100%
+    );
+}
+
+/*  PLATINUM */
+.color-swatch.platinum {
+  background:
+    linear-gradient(
+      125deg,
+      #DCDCDC 0%,
+      #E1E1E1 28%,
+      #f5f5f5 42%,
+      #E1E1E1 58%,
+      #DCDCDC 100%
+    );
+}
+
+.metal-label {
+  position: relative;
+  z-index: 2;
+  color: #5f6368;
+  font-weight: normal;
+  font-size: 10px;
+}
+
+.variant-metal input:checked + .color-swatch {
+  box-shadow: none;
+}
+
+.variant-metal input:checked + .color-swatch {
+  position: relative;
+  z-index: 2;
+}
+
+.variant-metal input:checked + .color-swatch {
+  outline: none;
+}
+
+.variant-metal .variant-item {
+  padding: 0px; /* 👈 ESTE es el espacio real */
+  border-radius: 50%;
+}
+
+.variant-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; 
+}
+
+.variant-metal .variant-item:has(input:checked),
+.variant-shape .variant-item:has(input:checked) {
+  outline: 1px solid #272A4C;
+  outline-offset: 3px;
+  border-radius: 50%;
+}
+
+.variant-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.variant-title {
+  font-size: 14px;
+  font-weight: 500;
+      display: flex;
+    align-items: center;
+}
+
+.variant-selected {
+  color: #6b6b6b;
+  margin-left: 4px;
+}
+
+.variant-info {
+  width: 12px;
+  height: 12px;
+  min-width: 12px; 
+  min-height: 12px;
+  border-radius: 50%;
+  border: 1px solid #737373;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px; 
+  line-height: 1;
+  background: transparent;
+  cursor: pointer;
+  color: #737373;
+  padding: 0;
+}
+
+.variant-size-dropdown {
+  margin-top: 16px;
+}
+
+/* fila principal */
+.variant-size-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* label izquierda */
+.variant-size-label {
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* valor gris */
+.variant-size-label .variant-selected {
+  color: #6b6b6b;
+  margin-left: 4px;
+  font-weight: 400;
+}
+
+/* wrapper derecha */
+.variant-size-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid #737373;
+}
+
+/* select limpio */
+.size-select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #737373; 
+  font-weight: 400; 
+  padding-right: 18px;
+  cursor: pointer;
+  width: 100%;
+  outline: none !important;
+}
+
+/* flechita */
+.size-arrow {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.size-arrow svg {
+  display: block;
+}
+
+.size-arrow svg {
+  transition: transform 0.25s ease;
+}
+
+/* cuando está abierto */
+.variant-size-select-wrapper.open .size-arrow svg {
+  transform: rotate(180deg);
+}
+
+/* línea inferior */
+.variant-size-line {
+  margin-top: 6px; 
+  height: 1px;
+  background: #cfcfcf;
+  width: 100%;
+}
+
+.variant-size-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 16px;
+}
+
+.variant-size-select-wrapper {
+  justify-self: end;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.product__pickup-availabilities {
+display: none !important;
+}
+
+.select-arrow {
+  transition: transform 0.2s ease;
+}
+
+/* estado abierto */
+.variant-size-select-wrapper.open .select-arrow {
+  transform: rotate(180deg);
+}
+
+.variant-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+  border: 1px solid #737373;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 500;
+  color: #737373;
+  cursor: pointer;
+  line-height: 1;
+}
