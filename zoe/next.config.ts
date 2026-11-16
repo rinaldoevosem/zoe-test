@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Separate build dirs let e2e run beside a dev server.
-  distDir: process.env.NEXT_DIST_DIR ?? ".next",
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  // The floating dev badge covers the sidebar's "Switch user" button in demos.
+  devIndicators: false,
   cacheComponents: true,
   partialPrefetching: true,
   // PGlite ships WASM + data files that must be loaded from node_modules at runtime.

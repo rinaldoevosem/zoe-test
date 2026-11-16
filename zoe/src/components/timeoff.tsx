@@ -91,10 +91,10 @@ export function PreferencesForm({ today, preferences, shiftTypes }: {
   return (
     <div className="grid gap-3">
       <form
-        className="grid gap-2 sm:grid-cols-[auto_1fr_1fr_auto]"
+        className="grid grid-cols-1 gap-2 sm:grid-cols-2"
         onSubmit={(e) => { e.preventDefault(); run(() => addPreferenceAction({ date: form.date, kind: form.kind, shiftTypeId: form.shiftTypeId || undefined })); }}
       >
-        <NativeSelect aria-label="Preference" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as PreferenceKind })}>
+        <NativeSelect aria-label="Preference" className="w-full" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as PreferenceKind })}>
           <NativeSelectOption value="avoid">Rather not work</NativeSelectOption>
           <NativeSelectOption value="want">Would like to work</NativeSelectOption>
         </NativeSelect>
@@ -103,7 +103,7 @@ export function PreferencesForm({ today, preferences, shiftTypes }: {
           <NativeSelectOption value="">Any Shift that day</NativeSelectOption>
           {shiftTypes.map((t) => <NativeSelectOption key={t.id} value={t.id}>{t.name}</NativeSelectOption>)}
         </NativeSelect>
-        <Button variant="outline" disabled={pending}>Add</Button>
+        <Button variant="outline" disabled={pending}>Add Preference</Button>
       </form>
       {preferences.length === 0 ? <p className="text-sm text-muted-foreground">No Preferences yet.</p> : (
         <ul className="flex flex-wrap gap-2">
