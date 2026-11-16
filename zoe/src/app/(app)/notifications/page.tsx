@@ -43,5 +43,5 @@ export default async function NotificationsPage() {
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;

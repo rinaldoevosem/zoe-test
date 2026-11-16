@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { prettyDate } from "@/lib/format";
 
-interface Unfilled { shiftId: string; missing: number; reasons: string[] }
+interface Unfilled { shiftId: string; missing: number; reasons: string[]; label: string; date: string }
 
 export function ScheduleToolbar({ period, today }: { period: { id: string; status: string; name: string } | null; today: string }) {
   const { pending, run } = useAction();
@@ -44,7 +45,7 @@ export function ScheduleToolbar({ period, today }: { period: { id: string; statu
           <ul className="max-h-80 space-y-2 overflow-auto text-sm">
             {unfilled?.map((u) => (
               <li key={u.shiftId} className="rounded-md border p-2">
-                <div className="font-medium">{u.missing} more needed</div>
+                <div className="font-medium">{u.label} · {prettyDate(u.date)} — {u.missing} more needed</div>
                 <div className="text-muted-foreground">{u.reasons.join(" · ") || "No staff available"}</div>
               </li>
             ))}

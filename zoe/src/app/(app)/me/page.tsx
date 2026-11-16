@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prettyDate, shiftColor, timeRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getDb, schema } from "@/server/db";
-import { loadSnapshot } from "@/server/repo";
+import { getDepartment, loadSnapshot } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { redirect } from "next/navigation";
 
@@ -34,8 +34,7 @@ export default async function MySchedulePage({ searchParams }: PageProps<"/me">)
   const me = actor.staffMemberId;
   const db = await getDb();
   const sp = await searchParams;
-  const probe = await loadSnapshot(db, actor.departmentId, "2000-01-01", "2000-01-01", { pad: 0 });
-  const tz = probe.department.timeZone;
+  const tz = (await getDepartment(db, actor.departmentId)).timeZone;
   const today = instantToLocalDate(currentInstant(), tz);
   const month = typeof sp.month === "string" && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : today.slice(0, 7);
   const { start, end } = monthBounds(month);
@@ -44,9 +43,9 @@ export default async function MySchedulePage({ searchParams }: PageProps<"/me">)
   const names = new Map(snap.ctx.staff.map((s) => [s.id, s.name]));
   const colleagues = (shiftId: string) => snap.ctx.assignments.filter((a) => a.shiftId === shiftId && a.staffId !== me).map((a) => names.get(a.staffId));
 
-  const timeOff = await db.select().from(schema.timeOffRequests).where(and(eq(schema.timeOffRequests.staffMemberId, me), gte(schema.timeOffRequests.endDate, start)));
+  const timeOff = await db.select().from(schema.timeOffRequests).where(and(eq(schema.timeOffRequests.organizationId, actor.organizationId), eq(schema.timeOffRequests.staffMemberId, me), gte(schema.timeOffRequests.endDate, start)));
   const offIn = timeOff.filter((t) => t.startDate <= end && (t.status === "approved" || t.status === "pending"));
-  const trades = await db.select().from(schema.tradeRequests).where(eq(schema.tradeRequests.requesterId, me));
+  const trades = await db.select().from(schema.tradeRequests).where(and(eq(schema.tradeRequests.organizationId, actor.organizationId), eq(schema.tradeRequests.requesterId, me)));
   const pendingTrade = new Set(trades.filter((t) => t.status === "open" || t.status === "accepted").map((t) => t.shiftId));
 
   const upcoming = await loadSnapshot(db, actor.departmentId, today, addDays(today, 30), { publishedOnly: true, pad: 0 });
@@ -119,5 +118,5 @@ export default async function MySchedulePage({ searchParams }: PageProps<"/me">)
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;

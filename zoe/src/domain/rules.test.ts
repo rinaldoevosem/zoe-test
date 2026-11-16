@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { checkAssignment, evaluate } from "./rules";
+import { checkAssignment, checkCandidate, evaluate } from "./rules";
 import { ctx, rulesOff, shift, staff } from "./testing/builders";
 
 const summary = (vs: { rule: string; severity: string; staffId: string; shiftId: string }[]) =>
@@ -106,6 +106,15 @@ describe("Rule engine", () => {
       assignments: [{ shiftId: "s1", staffId: "ana" }],
     });
     expect(summary(checkAssignment(c, { shiftId: "s1", staffId: "bo" }))).toEqual(["hard:headcount:bo@s1"]);
+  });
+
+  test("checkCandidate judges the person, not whether the Shift is already full", () => {
+    const c = ctx({
+      staff: [staff("ana"), staff("bo", { tags: [] })],
+      shifts: [shift("s1", "2026-01-05", { requiredTags: [] })],
+      assignments: [{ shiftId: "s1", staffId: "ana" }],
+    });
+    expect(checkCandidate(c, { shiftId: "s1", staffId: "bo" })).toEqual([]);
   });
 
   test("checkAssignment reports only Violations the new Assignment introduces", () => {

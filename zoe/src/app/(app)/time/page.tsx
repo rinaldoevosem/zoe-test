@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { PageHeader } from "@/components/page-header";
 import { ClockButton } from "@/components/misc-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ export default async function TimePage() {
   if (!actor.staffMemberId) redirect("/reports");
   const db = await getDb();
   const dept = await getDepartment(db, actor.departmentId);
-  const entries = await db.select().from(schema.timeEntries).where(eq(schema.timeEntries.staffMemberId, actor.staffMemberId)).orderBy(desc(schema.timeEntries.clockIn)).limit(30);
+  const entries = await db.select().from(schema.timeEntries).where(and(eq(schema.timeEntries.organizationId, actor.organizationId), eq(schema.timeEntries.staffMemberId, actor.staffMemberId))).orderBy(desc(schema.timeEntries.clockIn)).limit(30);
   const open = entries.find((e) => !e.clockOut);
   const fmt = (d: Date) => d.toLocaleString("en-US", { timeZone: dept.timeZone, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   return (
@@ -49,5 +49,5 @@ export default async function TimePage() {
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;

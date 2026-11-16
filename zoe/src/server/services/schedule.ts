@@ -2,7 +2,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { autofill, type AutofillResult } from "@/domain/autofill";
 import { computeLoad } from "@/domain/load";
-import { checkAssignment, hasHard, totalPenalty } from "@/domain/rules";
+import { checkAssignment, checkCandidate, hasHard, totalPenalty } from "@/domain/rules";
 import { addDays, eachDate, weekday } from "@/domain/time";
 import type { Violation } from "@/domain/types";
 import { schema, type DB } from "../db";
@@ -85,8 +85,7 @@ export async function candidatesFor(db: DB, actor: Actor, shiftId: string): Prom
   return snap.ctx.staff
     .filter((m) => !snap.ctx.assignments.some((a) => a.shiftId === shift.id && a.staffId === m.id))
     .map((m) => {
-      // Headcount is shown separately (the Shift is full); judge each person on their own Rules.
-      const vs = checkAssignment(snap.ctx, { shiftId: shift.id, staffId: m.id }).filter((v) => v.rule !== "headcount");
+      const vs = checkCandidate(snap.ctx, { shiftId: shift.id, staffId: m.id });
       return { staffId: m.id, name: m.name, clinicalRole: m.clinicalRole, fte: m.fte, load: loads.get(m.id) ?? 0, violations: vs, blocked: hasHard(vs), penalty: totalPenalty(vs) };
     })
     .sort((a, b) => Number(a.blocked) - Number(b.blocked) || a.load - b.load || a.penalty - b.penalty || a.name.localeCompare(b.name));
@@ -129,7 +128,7 @@ export async function setLocked(db: DB, actor: Actor, assignmentId: string, lock
   await audit(db, actor, locked ? "assignment.lock" : "assignment.unlock", `${locked ? "Locked" : "Unlocked"} an Assignment`, { assignmentId });
 }
 
-export async function runAutofill(db: DB, actor: Actor, periodId: string): Promise<AutofillResult> {
+export async function runAutofill(db: DB, actor: Actor, periodId: string): Promise<AutofillResult & { unfilled: (AutofillResult["unfilled"][number] & { label: string; date: string })[] }> {
   require(actor, "schedule:edit");
   const period = await getPeriod(db, actor, periodId);
   const snap = await loadSnapshot(db, actor.departmentId, period.startDate, period.endDate);
@@ -144,7 +143,11 @@ export async function runAutofill(db: DB, actor: Actor, periodId: string): Promi
     shifts: snap.ctx.shifts.map((s) => (inPeriod.has(s.id) ? s : { ...s, headcount: 0 })),
   });
   const added = result.added.filter((a) => inPeriod.has(a.shiftId));
-  const why = new Map(result.explanations.map((e) => [`${e.shiftId}|${e.staffId}`, e.summary]));
+  const names = new Map(snap.ctx.staff.map((m) => [m.id, m.name]));
+  const why = new Map(result.explanations.map((e) => [
+    `${e.shiftId}|${e.staffId}`,
+    e.summary + (e.runnersUp.length ? `. Runners-up: ${e.runnersUp.map((r) => `${names.get(r.staffId)} (Load ${r.projectedLoad}${r.penalty ? `, Penalty ${r.penalty}` : ""})`).join(", ")}` : ""),
+  ]));
   if (added.length) {
     const rows = added.map((a) => ({
       organizationId: actor.organizationId,
@@ -155,7 +158,9 @@ export async function runAutofill(db: DB, actor: Actor, periodId: string): Promi
     }));
     for (let i = 0; i < rows.length; i += 500) await db.insert(assignments).values(rows.slice(i, i + 500));
   }
-  const unfilled = result.unfilled.filter((u) => inPeriod.has(u.shiftId));
+  const byId = new Map(snap.shifts.map((s) => [s.id, s]));
+  const unfilled = result.unfilled.filter((u) => inPeriod.has(u.shiftId))
+    .map((u) => ({ ...u, label: byId.get(u.shiftId)!.label, date: byId.get(u.shiftId)!.date }));
   await audit(db, actor, "autofill.run", `Auto-fill added ${added.length} Assignments to ${period.name}; ${unfilled.length} Shifts still have Coverage Gaps`, { periodId });
   if (period.status === "published" && added.length) {
     await notify(db, actor.organizationId, added.map((a) => a.staffId), { category: "schedule", title: "New Shifts on your schedule", body: `Auto-fill added Shifts in ${period.name}`, href: "/me" });

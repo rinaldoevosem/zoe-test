@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
 import { renderCalendar } from "@/domain/ical";
-import { addDays, shiftInterval } from "@/domain/time";
+import { addDays, instantToLocalDate, shiftInterval } from "@/domain/time";
 import { schema, type DB } from "../db";
 import { loadSnapshot } from "../repo";
 import { audit, DomainError, type Actor } from "./common";
@@ -26,11 +26,13 @@ export async function hasCalendarToken(db: DB, actor: Actor) {
 }
 
 /** Renders the feed at request time from published Assignments: never stale. */
-export async function renderFeed(db: DB, token: string, today: string): Promise<string | null> {
+export async function renderFeed(db: DB, token: string, now: number): Promise<string | null> {
   const [t] = await db.select().from(calendarTokens).where(and(eq(calendarTokens.tokenHash, hash(token)), isNull(calendarTokens.revokedAt)));
   if (!t) return null;
   const [member] = await db.select().from(staffMembers).where(eq(staffMembers.id, t.staffMemberId));
   if (!member) return null;
+  const [dept] = await db.select().from(schema.departments).where(eq(schema.departments.id, member.departmentId));
+  const today = instantToLocalDate(now, dept.timeZone);
   const snap = await loadSnapshot(db, member.departmentId, addDays(today, -60), addDays(today, 365), { publishedOnly: true, pad: 0 });
   const mine = new Set(snap.ctx.assignments.filter((a) => a.staffId === member.id).map((a) => a.shiftId));
   const updated = new Map(snap.assignmentRows.map((a) => [a.shiftId + a.staffMemberId, a.updatedAt.getTime()]));

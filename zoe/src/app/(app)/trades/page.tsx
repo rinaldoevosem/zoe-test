@@ -70,5 +70,5 @@ function Section({ title, description, count, children }: { title: string; descr
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;

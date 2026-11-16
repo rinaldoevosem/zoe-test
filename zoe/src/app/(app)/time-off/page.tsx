@@ -2,7 +2,7 @@ import { currentInstant } from "@/server/clock";
 import { can } from "@/domain/permissions";
 import { instantToLocalDate } from "@/domain/time";
 import { PageHeader } from "@/components/page-header";
-import { DecideButtons, CancelButton, TimeOffForm } from "@/components/timeoff";
+import { DecideButtons, CancelButton, PreferencesForm, TimeOffForm } from "@/components/timeoff";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,7 @@ import { prettyDate } from "@/lib/format";
 import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
-import { listTimeOff } from "@/server/services/timeoff";
+import { listPreferences, listTimeOff } from "@/server/services/timeoff";
 
 export const metadata = { title: "Time off" };
 
@@ -25,12 +25,13 @@ export default async function TimeOffPage() {
   const mine = actor.staffMemberId ? await listTimeOff(db, actor, "mine") : [];
   const all = decider ? await listTimeOff(db, actor, "department") : [];
   const queue = all.filter((r) => r.request.status === "pending");
+  const prefs = (await listPreferences(db, actor)).filter((p) => p.date >= today);
 
   return (
     <>
       <PageHeader
         title="Time off"
-        description={<>Up to {dept.settings.requestLimit || "unlimited"} people may be off on the same day (Request Limit). You&apos;ll see a conflict before you submit.</>}
+        description={<>Up to {dept.settings.requestLimit || "unlimited"} people may be off on the same day (Request Limit). You&apos;ll be told before you submit if a date is full.</>}
       />
       <div className="grid gap-6 lg:grid-cols-2">
         {actor.staffMemberId && (
@@ -40,6 +41,15 @@ export default async function TimeOffPage() {
               <CardDescription>Approved time off is a Hard Rule: you won&apos;t be scheduled.</CardDescription>
             </CardHeader>
             <CardContent><TimeOffForm today={today} /></CardContent>
+          </Card>
+        )}
+        {actor.staffMemberId && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Preferences</CardTitle>
+              <CardDescription>Dates you&apos;d rather not work. Auto-fill avoids them when it can; it never blocks the schedule.</CardDescription>
+            </CardHeader>
+            <CardContent><PreferencesForm today={today} preferences={prefs.map((p) => ({ id: p.id, date: p.date }))} /></CardContent>
           </Card>
         )}
         {decider && (
@@ -91,5 +101,5 @@ export default async function TimeOffPage() {
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;

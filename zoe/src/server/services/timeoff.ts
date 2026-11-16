@@ -87,4 +87,26 @@ export async function decideTimeOff(db: DB, actor: Actor, requestId: string, dec
   return { conflicts };
 }
 
+/** Preferences: Soft wishes not to work a date. Breaking one costs Penalty, never blocks. */
+export async function listPreferences(db: DB, actor: Actor) {
+  if (!actor.staffMemberId) return [];
+  return db.select().from(schema.preferences)
+    .where(and(eq(schema.preferences.organizationId, actor.organizationId), eq(schema.preferences.staffMemberId, actor.staffMemberId)))
+    .orderBy(schema.preferences.date);
+}
 
+export async function addPreference(db: DB, actor: Actor, date: string) {
+  if (!actor.staffMemberId) throw new DomainError("Only Staff Members have Preferences");
+  const existing = await listPreferences(db, actor);
+  if (existing.some((p) => p.date === date)) throw new DomainError("You already have a Preference for that date");
+  if (existing.length >= 20) throw new DomainError("You can hold up to 20 Preferences at once");
+  await db.insert(schema.preferences).values({ organizationId: actor.organizationId, staffMemberId: actor.staffMemberId, date, kind: "avoid" });
+  await audit(db, actor, "preference.add", `${actor.name} prefers not to work ${date}`);
+}
+
+export async function removePreference(db: DB, actor: Actor, id: string) {
+  if (!actor.staffMemberId) throw new DomainError("Only Staff Members have Preferences");
+  const removed = await db.delete(schema.preferences)
+    .where(and(eq(schema.preferences.id, id), eq(schema.preferences.staffMemberId, actor.staffMemberId))).returning();
+  if (!removed.length) throw new DomainError("Preference not found");
+}

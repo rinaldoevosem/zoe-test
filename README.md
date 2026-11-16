@@ -1,3 +1,5 @@
+> **Zoe** — the clinical workforce scheduling platform — lives in [`zoe/`](zoe/README.md). The rest of this README covers the legacy Shopify theme at the repository root.
+
 # Shopify Theme
 
 ## Setup Instructions

@@ -35,6 +35,7 @@ async function run<T>(fn: (db: Awaited<ReturnType<typeof getDb>>, actor: Awaited
 }
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Dates must be YYYY-MM-DD");
+const id = z.string().min(1).max(64);
 
 export async function signInAs(userId: string) {
   await signIn(z.string().min(1).parse(userId));
@@ -54,21 +55,21 @@ export async function createPeriodAction(input: { name: string; startDate: strin
 }
 
 export async function assignAction(shiftId: string, staffId: string) {
-  return run((db, a) => schedule.assign(db, a, shiftId, staffId), (r) => (r.warnings.length ? `Assigned with ${r.warnings.length} warning(s)` : "Assigned"));
+  return run((db, a) => schedule.assign(db, a, id.parse(shiftId), id.parse(staffId)), (r) => (r.warnings.length ? `Assigned with ${r.warnings.length} warning(s)` : "Assigned"));
 }
 
 export async function unassignAction(assignmentId: string) {
-  return run((db, a) => schedule.unassign(db, a, assignmentId), () => "Removed");
+  return run((db, a) => schedule.unassign(db, a, id.parse(assignmentId)), () => "Removed");
 }
 
 export async function lockAction(assignmentId: string, locked: boolean) {
-  return run((db, a) => schedule.setLocked(db, a, assignmentId, locked), () => (locked ? "Locked" : "Unlocked"));
+  return run((db, a) => schedule.setLocked(db, a, id.parse(assignmentId), z.boolean().parse(locked)), () => (locked ? "Locked" : "Unlocked"));
 }
 
 export async function autofillAction(periodId: string) {
   return run(
     async (db, a) => {
-      const r = await schedule.runAutofill(db, a, periodId);
+      const r = await schedule.runAutofill(db, a, id.parse(periodId));
       return { added: r.added.length, unfilled: r.unfilled };
     },
     (r) => `Auto-fill added ${r.added} Assignments${r.unfilled.length ? `; ${r.unfilled.length} Shifts still need cover` : ""}`,
@@ -76,19 +77,19 @@ export async function autofillAction(periodId: string) {
 }
 
 export async function clearAutofillAction(periodId: string) {
-  return run((db, a) => schedule.clearAutofill(db, a, periodId), (n) => `Cleared ${n} Auto-fill Assignments`);
+  return run((db, a) => schedule.clearAutofill(db, a, id.parse(periodId)), (n) => `Cleared ${n} Auto-fill Assignments`);
 }
 
 export async function publishAction(periodId: string) {
-  return run((db, a) => schedule.publish(db, a, periodId), () => "Published — staff have been notified");
+  return run((db, a) => schedule.publish(db, a, id.parse(periodId)), () => "Published — staff have been notified");
 }
 
 export async function candidatesAction(shiftId: string) {
-  return run((db, a) => schedule.candidatesFor(db, a, shiftId));
+  return run((db, a) => schedule.candidatesFor(db, a, id.parse(shiftId)));
 }
 
 export async function limitCheckAction(startDate: string, endDate: string) {
-  return run((db, a) => timeoff.limitConflicts(db, a, startDate, endDate));
+  return run((db, a) => timeoff.limitConflicts(db, a, date.parse(startDate), date.parse(endDate)));
 }
 
 export async function requestTimeOffAction(input: { startDate: string; endDate: string; note?: string }) {
@@ -98,13 +99,15 @@ export async function requestTimeOffAction(input: { startDate: string; endDate: 
   );
 }
 
-export async function cancelTimeOffAction(id: string) {
-  return run((db, a) => timeoff.cancelTimeOff(db, a, id), () => "Request cancelled");
+export async function cancelTimeOffAction(requestId: string) {
+  return run((db, a) => timeoff.cancelTimeOff(db, a, id.parse(requestId)), () => "Request cancelled");
 }
 
-export async function decideTimeOffAction(id: string, decision: "approved" | "denied") {
-  return run((db, a) => timeoff.decideTimeOff(db, a, id, decision), (r) =>
-    decision === "approved" ? `Approved${r.conflicts.length ? ` — ${r.conflicts.length} Shift(s) now need reassigning` : ""}` : "Denied");
+export async function decideTimeOffAction(requestId: string, decision: "approved" | "denied") {
+  return run((db, a) => timeoff.decideTimeOff(db, a, id.parse(requestId), z.enum(["approved", "denied"]).parse(decision)), (r) =>
+    decision === "approved"
+      ? `Approved${r.conflicts.length ? ` — reassign: ${r.conflicts.map((c) => `${c.label} ${c.date}`).join(", ")}` : ""}`
+      : "Denied");
 }
 
 const tradeInput = z.object({
@@ -129,9 +132,17 @@ export async function createTradeAction(input: z.infer<typeof tradeInput>) {
     r.trade.status === "approved" ? "Done — your schedule is updated" : r.trade.status === "accepted" ? "Sent to your scheduler for approval" : "Request sent");
 }
 
-export async function tradeAction(id: string, event: "accept" | "decline" | "withdraw" | "approve" | "reject") {
-  return run((db, a) => trades.actOnTrade(db, a, id, event), (r) =>
+export async function tradeAction(tradeId: string, event: "accept" | "decline" | "withdraw" | "approve" | "reject") {
+  return run((db, a) => trades.actOnTrade(db, a, id.parse(tradeId), z.enum(["accept", "decline", "withdraw", "approve", "reject"]).parse(event)), (r) =>
     r.status === "approved" ? "Approved — schedules updated" : r.status === "accepted" ? "Accepted — awaiting scheduler approval" : `Trade ${r.status}`);
+}
+
+export async function addPreferenceAction(day: string) {
+  return run((db, a) => timeoff.addPreference(db, a, date.parse(day)), () => "Preference saved");
+}
+
+export async function removePreferenceAction(preferenceId: string) {
+  return run((db, a) => timeoff.removePreference(db, a, id.parse(preferenceId)), () => "Preference removed");
 }
 
 export async function rotateCalendarAction() {
@@ -139,7 +150,7 @@ export async function rotateCalendarAction() {
 }
 
 export async function clockAction(direction: "in" | "out") {
-  return run((db, a) => reports.clock(db, a, direction), () => (direction === "in" ? "Clocked in" : "Clocked out"));
+  return run((db, a) => reports.clock(db, a, z.enum(["in", "out"]).parse(direction)), () => (direction === "in" ? "Clocked in" : "Clocked out"));
 }
 
 export async function markAllReadAction() {

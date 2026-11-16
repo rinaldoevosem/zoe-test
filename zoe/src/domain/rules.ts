@@ -36,6 +36,14 @@ export function checkAssignment(ctx: ScheduleContext, assignment: Assignment): V
   return newViolations(before, after);
 }
 
+/**
+ * Violations a Staff Member would bring to a Shift on their own account, ignoring whether the Shift
+ * is already full (headcount is about the Shift, not the person). Used to rank replacements.
+ */
+export function checkCandidate(ctx: ScheduleContext, assignment: Assignment): Violation[] {
+  return checkAssignment(ctx, assignment).filter((v) => v.rule !== "headcount");
+}
+
 /** Violations in `after` whose identity (rule, staff, shift) was not already in `before`. */
 export function newViolations(before: Violation[], after: Violation[]): Violation[] {
   const seen = new Set(before.map(key));

@@ -80,10 +80,10 @@ describe("read models", () => {
   test("a Calendar Feed serves published Assignments and stops working once rotated", async () => {
     const morgan = await actorOf("Dr. Morgan Lee");
     const first = await rotateCalendarToken(db, morgan);
-    const ics = await renderFeed(db, first, "2026-11-16");
+    const ics = await renderFeed(db, first, NOW);
     expect(ics).toContain("BEGIN:VEVENT");
     await rotateCalendarToken(db, morgan);
-    expect(await renderFeed(db, first, "2026-11-16")).toBeNull();
+    expect(await renderFeed(db, first, NOW)).toBeNull();
   });
 
   test("Who's On Call lists the on-call Assignees covering the instant", async () => {

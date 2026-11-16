@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { shortName } from "@/lib/format";
 import { getDb } from "@/server/db";
-import { loadSnapshot } from "@/server/repo";
+import { getDepartment, loadSnapshot } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { listPeriods } from "@/server/services/schedule";
 import { listShiftTypes } from "@/server/services/settings";
@@ -26,8 +26,7 @@ export default async function SchedulePage({ searchParams }: PageProps<"/schedul
   const sp = await searchParams;
   const periods = await listPeriods(db, actor);
   const types = (await listShiftTypes(db, actor)).filter((t) => t.active);
-  const snapDept = periods.length ? await loadSnapshot(db, actor.departmentId, periods[0].startDate, periods[0].startDate, { pad: 0 }) : null;
-  const today = instantToLocalDate(currentInstant(), snapDept?.department.timeZone ?? "UTC");
+  const today = instantToLocalDate(currentInstant(), (await getDepartment(db, actor.departmentId)).timeZone);
   const period =
     periods.find((p) => p.id === sp.period) ??
     periods.find((p) => p.startDate <= today && today <= p.endDate) ??
@@ -111,5 +110,5 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "ok
   );
 }
 
-// Reads the session and the clock on every request (ADR-0008).
+// Reads the session and the clock on every request, so the page blocks instead of prerendering a shell.
 export const instant = false;
