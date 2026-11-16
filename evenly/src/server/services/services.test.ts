@@ -21,7 +21,7 @@ const NOW = Date.parse("2026-11-16T15:00:00Z");
 
 beforeAll(async () => {
   db = await createPgliteDb();
-  await seed(db, NOW);
+  await seed(db, NOW, "anesthesiology");
   const [u] = await db.select().from(schema.users).where(eq(schema.users.permission, "scheduler"));
   scheduler = { userId: u.id, name: u.name, permission: "scheduler", organizationId: u.organizationId, departmentId: u.departmentId, staffMemberId: null };
 }, 60_000);

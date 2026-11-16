@@ -1,3 +1,4 @@
+import { withRuleDefaults } from "@/domain/types";
 /** Loads domain snapshots from storage. Every query is scoped by Department (and so by Organization). */
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { addDays } from "@/domain/time";
@@ -21,7 +22,8 @@ export interface Snapshot {
 export async function getDepartment(db: DB, departmentId: string): Promise<Department> {
   const [d] = await db.select().from(departments).where(eq(departments.id, departmentId));
   if (!d) throw new Error("Department not found");
-  return d;
+  // Stored settings may predate newer Rules and settings: fill in their defaults.
+  return { ...d, settings: { ...d.settings, rules: withRuleDefaults(d.settings.rules), autoPublish: d.settings.autoPublish ?? false } };
 }
 
 /**

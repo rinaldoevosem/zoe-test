@@ -1,3 +1,4 @@
+import { DEFAULT_RULES } from "@/domain/types";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { evaluate, newViolations } from "@/domain/rules";
@@ -54,10 +55,16 @@ async function rejudge(db: DB, actor: Actor, now: number, change: () => Promise<
 }
 
 const threshold = z.object({ enabled: z.boolean(), hard: z.boolean(), value: z.number().min(0).max(200) });
+const blockRest = z.object({ enabled: z.boolean(), hard: z.boolean(), minBlockDays: z.number().int().min(2).max(31), daysOff: z.number().int().min(1).max(31) });
 const settingsInput = z.object({
-  rules: z.object({ minRestHours: threshold, maxConsecutiveDays: threshold, maxShiftsPerWeek: threshold, preferences: z.object({ enabled: z.boolean() }) }),
+  rules: z.object({
+    minRestHours: threshold, maxConsecutiveDays: threshold, maxShiftsPerWeek: threshold, preferences: z.object({ enabled: z.boolean() }),
+    restAfterBlock: blockRest.default(DEFAULT_RULES.restAfterBlock),
+    continuity: z.object({ enabled: z.boolean() }).default(DEFAULT_RULES.continuity),
+  }),
   tradePolicy: z.enum(["auto", "manual"]),
   requestLimit: z.number().int().min(0).max(100),
+  autoPublish: z.boolean().default(false),
 });
 
 export async function saveDepartmentSettings(db: DB, actor: Actor, input: unknown, now = currentInstant()) {

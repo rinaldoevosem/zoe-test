@@ -2,11 +2,11 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { autofill, type AutofillResult } from "@/domain/autofill";
 import { computeLoad } from "@/domain/load";
-import { checkAssignment, checkCandidate, hasHard, totalPenalty } from "@/domain/rules";
+import { checkAssignment, checkCandidate, evaluate, hasHard, totalPenalty } from "@/domain/rules";
 import { addDays, eachDate, weekday } from "@/domain/time";
 import type { Violation } from "@/domain/types";
 import { schema, type DB } from "../db";
-import { loadSnapshot, within } from "../repo";
+import { getDepartment, loadSnapshot, within } from "../repo";
 import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
 
 const { assignments, schedulePeriods, shiftTypes, shifts } = schema;
@@ -128,7 +128,13 @@ export async function setLocked(db: DB, actor: Actor, assignmentId: string, lock
   await audit(db, actor, locked ? "assignment.lock" : "assignment.unlock", `${locked ? "Locked" : "Unlocked"} an Assignment`, { assignmentId });
 }
 
-export async function runAutofill(db: DB, actor: Actor, periodId: string): Promise<AutofillResult & { unfilled: (AutofillResult["unfilled"][number] & { label: string; date: string })[] }> {
+export interface AutoPublishOutcome { published: boolean; reason?: string }
+
+export async function runAutofill(db: DB, actor: Actor, periodId: string): Promise<AutofillResult & {
+  unfilled: (AutofillResult["unfilled"][number] & { label: string; date: string })[];
+  /** Set when the Department has Auto-publish on and the period was a draft. */
+  autoPublish: AutoPublishOutcome | null;
+}> {
   require(actor, "schedule:edit");
   const period = await getPeriod(db, actor, periodId);
   const snap = await loadSnapshot(db, actor.departmentId, period.startDate, period.endDate);
@@ -165,7 +171,29 @@ export async function runAutofill(db: DB, actor: Actor, periodId: string): Promi
   if (period.status === "published" && added.length) {
     await notify(db, actor.organizationId, added.map((a) => a.staffId), { category: "schedule", title: "New Shifts on your schedule", body: `Auto-fill added Shifts in ${period.name}`, href: "/me" });
   }
-  return { added, explanations: result.explanations.filter((e) => inPeriod.has(e.shiftId)), unfilled };
+  const autoPublish = period.status === "draft" ? await maybeAutoPublish(db, actor, period, inPeriod, unfilled.length) : null;
+  return { added, explanations: result.explanations.filter((e) => inPeriod.has(e.shiftId)), unfilled, autoPublish };
+}
+
+/** Auto-publish: publish a draft period only when nothing in it breaks a Hard Rule and no Coverage Gap is left. */
+async function maybeAutoPublish(
+  db: DB, actor: Actor, period: { id: string; startDate: string; endDate: string }, inPeriod: Set<string>, gaps: number,
+): Promise<AutoPublishOutcome | null> {
+  const dept = await getDepartment(db, actor.departmentId);
+  if (!dept.settings.autoPublish) return null;
+  const after = await loadSnapshot(db, actor.departmentId, period.startDate, period.endDate);
+  const hard = evaluate(after.ctx).filter((v) => v.severity === "hard" && inPeriod.has(v.shiftId));
+  const reasons = [
+    hard.length ? `${hard.length} Hard Violation${hard.length === 1 ? "" : "s"}` : "",
+    gaps ? `${gaps} Shift${gaps === 1 ? "" : "s"} with Coverage Gaps` : "",
+  ].filter(Boolean);
+  if (reasons.length) {
+    const reason = `Auto-publish held back: ${reasons.join(" and ")}`;
+    await audit(db, actor, "period.autopublish.held", reason, { periodId: period.id });
+    return { published: false, reason };
+  }
+  await publish(db, actor, period.id);
+  return { published: true };
 }
 
 /** Removes every unlocked Auto-fill Assignment in a draft period, so Auto-fill can be re-run cleanly. */

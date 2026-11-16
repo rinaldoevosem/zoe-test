@@ -32,10 +32,9 @@ test("staff can't open the schedule builder", async ({ page }) => {
   await expect(page).toHaveURL(/\/me/);
 });
 
-test("Who's On Call shows the overnight on-call Assignees", async ({ page }) => {
+test("Who's On Call shows the overnight Nocturnists", async ({ page }) => {
   await signInAs(page, "Riley Chen");
   await page.goto("/on-call?at=2026-11-17T03:00:00Z");
   const now = page.getByTestId("on-call-now");
-  await expect(now.getByText("Night Call")).toBeVisible();
-  await expect(now.getByText("OB Night")).toBeVisible();
+  await expect(now.getByText("Nocturnist").first()).toBeVisible();
 });

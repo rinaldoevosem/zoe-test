@@ -64,6 +64,36 @@ export function RulesForm({ initial, readOnly }: { initial: DepartmentSettings; 
           <input type="checkbox" className="size-4" checked={s.rules.preferences.enabled} onChange={(e) => setS({ ...s, rules: { ...s.rules, preferences: { enabled: e.target.checked } } })} />
           Honour staff Preferences (Soft)
         </label>
+        <div className="grid items-center gap-2 rounded-md border p-3 sm:grid-cols-[1fr_auto_auto]">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" className="size-4" checked={s.rules.restAfterBlock.enabled}
+              onChange={(e) => setS({ ...s, rules: { ...s.rules, restAfterBlock: { ...s.rules.restAfterBlock, enabled: e.target.checked } } })} />
+            Rest after Block
+          </label>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            after
+            <Input type="number" min={2} max={31} className="w-16" value={s.rules.restAfterBlock.minBlockDays} aria-label="Block length in days"
+              onChange={(e) => setS({ ...s, rules: { ...s.rules, restAfterBlock: { ...s.rules.restAfterBlock, minBlockDays: Number(e.target.value) } } })} />
+            days in a row, at least
+            <Input type="number" min={1} max={31} className="w-16" value={s.rules.restAfterBlock.daysOff} aria-label="Days off after a Block"
+              onChange={(e) => setS({ ...s, rules: { ...s.rules, restAfterBlock: { ...s.rules.restAfterBlock, daysOff: Number(e.target.value) } } })} />
+            days off
+          </div>
+          <NativeSelect value={s.rules.restAfterBlock.hard ? "hard" : "soft"} aria-label="Rest after Block severity"
+            onChange={(e) => setS({ ...s, rules: { ...s.rules, restAfterBlock: { ...s.rules.restAfterBlock, hard: e.target.value === "hard" } } })}>
+            <NativeSelectOption value="hard">Hard — blocks</NativeSelectOption>
+            <NativeSelectOption value="soft">Soft — warns</NativeSelectOption>
+          </NativeSelect>
+        </div>
+        <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
+          <input type="checkbox" className="mt-0.5 size-4" checked={s.rules.continuity.enabled}
+            onChange={(e) => setS({ ...s, rules: { ...s.rules, continuity: { enabled: e.target.checked } } })} />
+          <span><span className="font-medium">Continuity</span> <span className="text-muted-foreground">— Auto-fill keeps one person on a Shift Type for whole Blocks (hospital medicine), instead of rotating daily.</span></span>
+        </label>
+        <label className="flex items-start gap-2 rounded-md border p-3 text-sm">
+          <input type="checkbox" className="mt-0.5 size-4" checked={s.autoPublish} onChange={(e) => setS({ ...s, autoPublish: e.target.checked })} />
+          <span><span className="font-medium">Auto-publish</span> <span className="text-muted-foreground">— publish a draft period as soon as Auto-fill leaves no Hard Violations. Off: a scheduler reviews and publishes.</span></span>
+        </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <Label htmlFor="policy">Trade approval</Label>

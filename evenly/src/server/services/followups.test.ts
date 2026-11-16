@@ -24,7 +24,7 @@ const actorFor = async (where: ReturnType<typeof eq>): Promise<Actor> => {
 
 beforeAll(async () => {
   db = await createPgliteDb();
-  await seed(db, NOW);
+  await seed(db, NOW, "anesthesiology");
   scheduler = await actorFor(eq(schema.users.permission, "scheduler"));
   admin = await actorFor(eq(schema.users.permission, "admin"));
 }, 60_000);

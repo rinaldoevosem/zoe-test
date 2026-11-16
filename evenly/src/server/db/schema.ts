@@ -16,6 +16,8 @@ export interface DepartmentSettings {
   rules: RuleConfig;
   tradePolicy: "auto" | "manual";
   requestLimit: number;
+  /** Publish a draft period right after a clean Auto-fill run (no Hard Violations). */
+  autoPublish: boolean;
 }
 
 export const departments = pgTable("departments", {

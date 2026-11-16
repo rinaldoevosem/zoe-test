@@ -1,7 +1,7 @@
 # 01: Blocks: Rest after Block and Continuity in Auto-fill
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: None (can start immediately)
 Spec: [beta spec](../spec.md)
 
@@ -11,7 +11,7 @@ Add Rest after Block and Continuity to the Rule configuration with off-by-defaul
 
 ## Acceptance criteria
 
-- [ ] A 7-day run followed by a Shift 3 days later violates Rest after Block (7 days, 5 off); Hard or Soft per setting
-- [ ] With Continuity on, Auto-fill over a fortnight gives each Day Team seat whole Blocks bounded by max consecutive days
-- [ ] Old Departments without the new fields behave exactly as before (existing tests unchanged)
-- [ ] Rules form saves both settings and re-judges published Shifts
+- [x] A 7-day run followed by a Shift 3 days later violates Rest after Block (7 days, 5 off); Hard or Soft per setting
+- [x] With Continuity on, Auto-fill over a fortnight gives each Day Team seat whole Blocks bounded by max consecutive days
+- [x] Old Departments without the new fields behave exactly as before (existing tests unchanged)
+- [x] Rules form saves both settings and re-judges published Shifts

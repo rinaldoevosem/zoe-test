@@ -71,9 +71,10 @@ export async function autofillAction(periodId: string) {
   return run(
     async (db, a) => {
       const r = await schedule.runAutofill(db, a, id.parse(periodId));
-      return { added: r.added.length, unfilled: r.unfilled };
+      return { added: r.added.length, unfilled: r.unfilled, autoPublish: r.autoPublish };
     },
-    (r) => `Auto-fill added ${r.added} Assignments${r.unfilled.length ? `; ${r.unfilled.length} Shifts still need cover` : ""}`,
+    (r) => `Auto-fill added ${r.added} Assignments${r.unfilled.length ? `; ${r.unfilled.length} Shifts still need cover` : ""}` +
+      (r.autoPublish ? (r.autoPublish.published ? ". Auto-published." : `. ${r.autoPublish.reason}.`) : ""),
   );
 }
 

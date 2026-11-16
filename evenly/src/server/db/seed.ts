@@ -1,12 +1,14 @@
 /** Demo data so every flow can be tried with zero setup (spec story 40). Runs once on an empty database. */
 import { addDays, instantToLocalDate } from "@/domain/time";
-import { DEFAULT_RULES } from "@/domain/types";
+import { DEFAULT_RULES, type RuleConfig } from "@/domain/types";
 import type { Actor } from "../services/common";
 import { schema, type DB } from "./index";
 
 const TZ = "America/New_York";
 
-const STAFF: { name: string; role: string; fte: number; tags: string[]; email: string }[] = [
+type SeedStaff = { name: string; role: string; fte: number; tags: string[]; email: string; tagExpiry?: Record<string, number> };
+
+const ANES_STAFF: SeedStaff[] = [
   { name: "Dr. Morgan Lee", role: "physician", fte: 1, tags: ["cardiac", "ob"], email: "morgan.lee@riverside.example" },
   { name: "Dr. Priya Shah", role: "physician", fte: 1, tags: ["peds", "regional"], email: "priya.shah@riverside.example" },
   { name: "Dr. Daniel Okafor", role: "physician", fte: 1, tags: ["cardiac"], email: "daniel.okafor@riverside.example" },
@@ -25,7 +27,7 @@ const STAFF: { name: string; role: string; fte: number; tags: string[]; email: s
 
 const WEEKDAYS = [1, 2, 3, 4, 5];
 const ALL = [0, 1, 2, 3, 4, 5, 6];
-const SHIFT_TYPES = [
+const ANES_SHIFT_TYPES = [
   { name: "OR Day", code: "OR", color: "sky", startMinute: 7 * 60, endMinute: 17 * 60, weekdays: WEEKDAYS, requiredTags: [], headcount: 3, weight: 1, onCall: false },
   { name: "Cardiac", code: "CV", color: "rose", startMinute: 7 * 60, endMinute: 17 * 60, weekdays: WEEKDAYS, requiredTags: ["cardiac"], headcount: 1, weight: 1, onCall: false },
   { name: "Pediatrics", code: "PEDS", color: "amber", startMinute: 7 * 60, endMinute: 15 * 60, weekdays: WEEKDAYS, requiredTags: ["peds"], headcount: 1, weight: 0.8, onCall: false },
@@ -35,21 +37,82 @@ const SHIFT_TYPES = [
   { name: "Weekend Call", code: "WKND", color: "teal", startMinute: 7 * 60, endMinute: 19 * 60, weekdays: [0, 6], requiredTags: [], headcount: 2, weight: 1.5, onCall: true },
 ];
 
+
+const md = (name: string, email: string, extra: string[] = [], fte = 1): SeedStaff => ({ name, role: "physician", fte, tags: ["md", ...extra], email: `${email}@riverside.example` });
+/** Hospital medicine (the pilot): hospitalists in 7-day Blocks, nocturnists, APPs and a Procedure Service. */
+const HM_STAFF: SeedStaff[] = [
+  { ...md("Dr. Morgan Lee", "morgan.lee", ["procedures"]), tagExpiry: { procedures: 75 } },
+  md("Dr. Priya Shah", "priya.shah"),
+  { ...md("Dr. Daniel Okafor", "daniel.okafor", ["procedures"]), tagExpiry: { procedures: 20 } },
+  md("Dr. Elena Rossi", "elena.rossi", [], 0.8),
+  md("Dr. Sam Whitfield", "sam.whitfield"),
+  md("Dr. Aiko Tanaka", "aiko.tanaka"),
+  md("Dr. Marcus Bell", "marcus.bell"),
+  md("Dr. Grace Kim", "grace.kim", ["procedures"]),
+  md("Dr. Noah Fischer", "noah.fischer"),
+  md("Dr. Hana Yusuf", "hana.yusuf"),
+  md("Dr. Leo Martins", "leo.martins"),
+  { ...md("Dr. Sofia Reyes", "sofia.reyes", ["procedures"]), tagExpiry: { procedures: -10 } },
+  md("Dr. Ethan Brooks", "ethan.brooks"),
+  { name: "Dr. Ivy Okonkwo", role: "physician", fte: 1, tags: ["nights"], email: "ivy.okonkwo@riverside.example" },
+  { name: "Dr. Ben Carter", role: "physician", fte: 1, tags: ["nights"], email: "ben.carter@riverside.example" },
+  { name: "Dr. Ruth Alvarez", role: "physician", fte: 1, tags: ["nights"], email: "ruth.alvarez@riverside.example" },
+  { name: "Dr. Omar Haddad", role: "physician", fte: 1, tags: ["nights"], email: "omar.haddad@riverside.example" },
+  { name: "Dr. Mei Lin", role: "physician", fte: 1, tags: ["nights"], email: "mei.lin@riverside.example" },
+  { name: "Jordan Alvarez, PA-C", role: "PA", fte: 1, tags: ["app"], email: "jordan.alvarez@riverside.example" },
+  { name: "Riley Chen, NP", role: "NP", fte: 1, tags: ["app"], email: "riley.chen@riverside.example" },
+  { name: "Taylor Brooks, PA-C", role: "PA", fte: 1, tags: ["app"], email: "taylor.brooks@riverside.example" },
+  { name: "Casey Nguyen, NP", role: "NP", fte: 1, tags: ["app"], email: "casey.nguyen@riverside.example" },
+  { name: "Avery Patel, NP", role: "NP", fte: 1, tags: ["app"], email: "avery.patel@riverside.example" },
+];
+const HM_SHIFT_TYPES = [
+  { name: "Day Team", code: "DAY", color: "sky", startMinute: 7 * 60, endMinute: 19 * 60, weekdays: ALL, requiredTags: ["md"], headcount: 4, weight: 1, onCall: false },
+  { name: "Admitter", code: "ADM", color: "amber", startMinute: 11 * 60, endMinute: 23 * 60, weekdays: ALL, requiredTags: ["md"], headcount: 1, weight: 1.1, onCall: false },
+  { name: "Procedure Service", code: "PROC", color: "rose", startMinute: 8 * 60, endMinute: 16 * 60, weekdays: WEEKDAYS, requiredTags: ["procedures"], headcount: 1, weight: 0.9, onCall: false },
+  { name: "Nocturnist", code: "NOC", color: "indigo", startMinute: 19 * 60, endMinute: 31 * 60, weekdays: ALL, requiredTags: ["nights"], headcount: 2, weight: 1.3, onCall: true },
+  { name: "APP Day", code: "APP", color: "emerald", startMinute: 7 * 60, endMinute: 19 * 60, weekdays: ALL, requiredTags: ["app"], headcount: 2, weight: 1, onCall: false },
+];
+const HM_RULES: RuleConfig = {
+  ...DEFAULT_RULES,
+  maxConsecutiveDays: { enabled: true, hard: true, value: 7 },
+  maxShiftsPerWeek: { ...DEFAULT_RULES.maxShiftsPerWeek, enabled: false },
+  restAfterBlock: { enabled: true, hard: true, minBlockDays: 7, daysOff: 7 },
+  continuity: { enabled: true },
+};
+
+export type Specialty = "hospital-medicine" | "anesthesiology";
+const SPECIALTIES = {
+  "hospital-medicine": {
+    department: "Hospital Medicine", staff: HM_STAFF, shiftTypes: HM_SHIFT_TYPES, rules: HM_RULES,
+    timeOff: [["Dr. Priya Shah", 3, 7, "approved", "Conference"], ["Riley Chen, NP", 10, 12, "approved", "Family"], ["Dr. Marcus Bell", 30, 34, "pending", "Vacation"], ["Dr. Grace Kim", 40, 41, "pending", "Wedding"]],
+    avoid: [["Dr. Daniel Okafor", 5], ["Dr. Elena Rossi", 6]],
+    tradeShiftType: "Day Team",
+  },
+  anesthesiology: {
+    department: "Anesthesiology", staff: ANES_STAFF, shiftTypes: ANES_SHIFT_TYPES, rules: DEFAULT_RULES,
+    timeOff: [["Dr. Priya Shah", 3, 7, "approved", "Conference"], ["Riley Chen, CRNA", 10, 12, "approved", "Family"], ["Dr. Marcus Bell", 30, 34, "pending", "Vacation"], ["Dr. Grace Kim", 40, 41, "pending", "Wedding"]],
+    avoid: [["Dr. Daniel Okafor", 5], ["Dr. Elena Rossi", 6]],
+    tradeShiftType: null,
+  },
+} as const satisfies Record<Specialty, unknown>;
+
 export async function ensureSeeded(db: DB) {
   const existing = await db.select({ id: schema.organizations.id }).from(schema.organizations).limit(1);
   if (existing.length) return;
   await seed(db, (await import("../clock")).currentInstant());
 }
 
-export async function seed(db: DB, now: number) {
+export async function seed(db: DB, now: number, specialty: Specialty = "hospital-medicine") {
+  const cfg = SPECIALTIES[specialty];
+  const STAFF: readonly SeedStaff[] = cfg.staff;
   // Fixed ids for the demo people, so a signed-in cookie stays valid on any fresh, re-seeded instance (serverless previews).
   const [org] = await db.insert(schema.organizations).values({ id: "demo-org", name: "Riverside Health" }).returning();
   const [dept] = await db.insert(schema.departments).values({
     id: "demo-dept",
     organizationId: org.id,
-    name: "Anesthesiology",
+    name: cfg.department,
     timeZone: TZ,
-    settings: { rules: DEFAULT_RULES, tradePolicy: "auto", requestLimit: 3 },
+    settings: { rules: cfg.rules, tradePolicy: "auto", requestLimit: 3, autoPublish: false },
   }).returning();
   const staff = await db.insert(schema.staffMembers).values(STAFF.map((s, i) => ({
     id: `demo-staff-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email, clinicalRole: s.role, fte: s.fte, tags: s.tags,
@@ -61,7 +124,7 @@ export async function seed(db: DB, now: number) {
       id: `demo-user-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email!, permission: (i === 0 ? "admin" : "staff") as "admin" | "staff", staffMemberId: s.id,
     })),
   ]).returning();
-  await db.insert(schema.shiftTypes).values(SHIFT_TYPES.map((t, i) => ({ organizationId: org.id, departmentId: dept.id, sortOrder: i, ...t })));
+  await db.insert(schema.shiftTypes).values(cfg.shiftTypes.map((t, i) => ({ organizationId: org.id, departmentId: dept.id, sortOrder: i, ...t })));
 
   const scheduler: Actor = { userId: users[0].id, name: users[0].name, permission: "scheduler", organizationId: org.id, departmentId: dept.id, staffMemberId: null };
   const today = instantToLocalDate(now, TZ);
@@ -79,16 +142,11 @@ export async function seed(db: DB, now: number) {
 
   const s = (name: string) => staff.find((x) => x.name === name)!.id;
   // Time off and preferences before Auto-fill so the schedule respects them.
-  await db.insert(schema.timeOffRequests).values([
-    { organizationId: org.id, departmentId: dept.id, staffMemberId: s("Dr. Priya Shah"), startDate: addDays(today, 3), endDate: addDays(today, 7), status: "approved", note: "Conference", decidedBy: scheduler.name },
-    { organizationId: org.id, departmentId: dept.id, staffMemberId: s("Riley Chen, CRNA"), startDate: addDays(today, 10), endDate: addDays(today, 12), status: "approved", note: "Family", decidedBy: scheduler.name },
-    { organizationId: org.id, departmentId: dept.id, staffMemberId: s("Dr. Marcus Bell"), startDate: addDays(today, 30), endDate: addDays(today, 34), status: "pending", note: "Vacation" },
-    { organizationId: org.id, departmentId: dept.id, staffMemberId: s("Dr. Grace Kim"), startDate: addDays(today, 40), endDate: addDays(today, 41), status: "pending", note: "Wedding" },
-  ]);
-  await db.insert(schema.preferences).values([
-    { organizationId: org.id, staffMemberId: s("Dr. Daniel Okafor"), date: addDays(today, 5), kind: "avoid" },
-    { organizationId: org.id, staffMemberId: s("Dr. Elena Rossi"), date: addDays(today, 6), kind: "avoid" },
-  ]);
+  await db.insert(schema.timeOffRequests).values(cfg.timeOff.map(([who, from, to, status, note]) => ({
+    organizationId: org.id, departmentId: dept.id, staffMemberId: s(who), startDate: addDays(today, from), endDate: addDays(today, to),
+    status, note, ...(status === "approved" ? { decidedBy: scheduler.name } : {}),
+  })));
+  await db.insert(schema.preferences).values(cfg.avoid.map(([who, days]) => ({ organizationId: org.id, staffMemberId: s(who), date: addDays(today, days), kind: "avoid" as const })));
 
   const { createPeriod, runAutofill, publish } = await import("../services/schedule");
   for (const [i, m] of months.entries()) {
@@ -103,7 +161,7 @@ export async function seed(db: DB, now: number) {
   const { listTrades, createTrade } = await import("../services/trades");
   const { loadSnapshot } = await import("../repo");
   const snap = await loadSnapshot(db, dept.id, addDays(today, 2), addDays(today, 20), { pad: 0, publishedOnly: true });
-  const future = snap.shifts.filter((x) => x.date > addDays(today, 2) && !x.requiredTags.length);
+  const future = snap.shifts.filter((x) => x.date > addDays(today, 2) && (cfg.tradeShiftType ? x.label === cfg.tradeShiftType : !x.requiredTags.length));
   const actorFor = (staffId: string): Actor => {
     const u = users.find((x) => x.staffMemberId === staffId)!;
     return { userId: u.id, name: u.name, permission: u.permission, organizationId: org.id, departmentId: dept.id, staffMemberId: staffId };

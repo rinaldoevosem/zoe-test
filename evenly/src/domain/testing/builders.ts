@@ -27,6 +27,8 @@ export function rulesOff(over: Partial<RuleConfig> = {}): RuleConfig {
     maxConsecutiveDays: { ...DEFAULT_RULES.maxConsecutiveDays, enabled: false },
     maxShiftsPerWeek: { ...DEFAULT_RULES.maxShiftsPerWeek, enabled: false },
     preferences: { enabled: false },
+    restAfterBlock: { ...DEFAULT_RULES.restAfterBlock, enabled: false },
+    continuity: { enabled: false },
     ...over,
   };
 }

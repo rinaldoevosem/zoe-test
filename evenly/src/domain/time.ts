@@ -85,3 +85,9 @@ export function wallClockRange(start: string, end: string): { startMinute: numbe
   if (endMinute <= startMinute) endMinute += 1440;
   return { startMinute, endMinute };
 }
+
+/** Whole days from `from` to `to` (local dates); negative when `to` is earlier. */
+export function daysBetween(from: LocalDate, to: LocalDate): number {
+  const ms = (d: LocalDate) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+  return Math.round((ms(to) - ms(from)) / 86_400_000);
+}

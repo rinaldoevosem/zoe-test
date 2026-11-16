@@ -4,7 +4,7 @@
  */
 import { loadOf } from "./load";
 import { checkAssignment, hasHard, matchesPreference, totalPenalty } from "./rules";
-import { isWeekend } from "./time";
+import { addDays, isWeekend } from "./time";
 import type { Assignment, RuleKind, ScheduleContext, Shift, ShiftId, StaffId, StaffMember } from "./types";
 
 export interface Candidate {
@@ -13,6 +13,8 @@ export interface Candidate {
   penalty: number;
   /** The Staff Member has a "want" Preference for this Shift. Breaks ties only; never outweighs Load or Penalty. */
   wants: boolean;
+  /** Holds the same Shift Type on the day before or after (Continuity, ADR-0009). */
+  continues: boolean;
 }
 
 export interface Explanation {
@@ -42,6 +44,7 @@ const REASON_LABEL: Partial<Record<RuleKind, string>> = {
   minRest: "would not get minimum rest",
   maxConsecutiveDays: "at consecutive-day limit",
   maxShiftsPerWeek: "at weekly limit",
+  restAfterBlock: "resting after a Block",
 };
 
 export function autofill(input: ScheduleContext): AutofillResult {
@@ -54,16 +57,26 @@ export function autofill(input: ScheduleContext): AutofillResult {
   const staff = [...ctx.staff].sort((a, b) => a.id.localeCompare(b.id));
   const load = (m: StaffMember, extra = 0) => loadOf((weightByStaff.get(m.id) ?? 0) + extra, m.fte) + (ctx.priorLoad?.[m.id] ?? 0);
 
-  // Most-constrained first: fewest Staff Members who could ever hold the Shift, then weekend/on-call, then chronological.
+  // Most-constrained first: fewest Staff Members who could ever hold the Shift, then on-call, then weekends,
+  // then chronological. With Continuity on, weekends don't jump the queue, so Blocks grow forwards in date order.
+  const continuity = !!ctx.rules.continuity?.enabled;
   const scarcity = (s: Shift) => staff.filter((m) => s.requiredTags.every((t) => m.tags.includes(t))).length;
   const gaps = ctx.shifts
     .filter((s) => ctx.assignments.filter((a) => a.shiftId === s.id).length < s.headcount)
     .sort((a, b) =>
       scarcity(a) - scarcity(b) ||
       Number(b.onCall) - Number(a.onCall) ||
-      Number(isWeekend(b.date)) - Number(isWeekend(a.date)) ||
+      (continuity ? 0 : Number(isWeekend(b.date)) - Number(isWeekend(a.date))) ||
       a.date.localeCompare(b.date) || a.startMinute - b.startMinute || a.id.localeCompare(b.id),
     );
+  const holdsAdjacent = (m: StaffMember, s: Shift) => {
+    const near = new Set([addDays(s.date, -1), addDays(s.date, 1)]);
+    return ctx.assignments.some((a) => {
+      if (a.staffId !== m.id) return false;
+      const other = shiftsById.get(a.shiftId);
+      return !!other && other.shiftTypeId === s.shiftTypeId && near.has(other.date);
+    });
+  };
 
   const added: Assignment[] = [];
   const explanations: Explanation[] = [];
@@ -82,7 +95,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
           continue;
         }
         const wants = ctx.rules.preferences.enabled && ctx.preferences.some((p) => p.kind === "want" && matchesPreference(p, m.id, s));
-        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs), wants });
+        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs), wants, continues: continuity && holdsAdjacent(m, s) });
       }
       if (!eligible.length) {
         unfilled.push({
@@ -93,7 +106,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
         });
         break;
       }
-      eligible.sort((a, b) => a.projectedLoad - b.projectedLoad || a.penalty - b.penalty || Number(b.wants) - Number(a.wants) || a.staffId.localeCompare(b.staffId));
+      eligible.sort((a, b) => Number(b.continues) - Number(a.continues) || a.projectedLoad - b.projectedLoad || a.penalty - b.penalty || Number(b.wants) - Number(a.wants) || a.staffId.localeCompare(b.staffId));
       const [pick, ...rest] = eligible;
       const assignment = { shiftId: s.id, staffId: pick.staffId };
       ctx.assignments.push(assignment);
@@ -104,7 +117,8 @@ export function autofill(input: ScheduleContext): AutofillResult {
         staffId: pick.staffId,
         eligibleCount: eligible.length,
         summary:
-          `Chosen from ${eligible.length} eligible: lowest Load (${pick.projectedLoad})` +
+          `Chosen from ${eligible.length} eligible: ` +
+          (pick.continues ? `continues their Block (Load ${pick.projectedLoad})` : `lowest Load (${pick.projectedLoad})`) +
           (pick.penalty ? `, accepting ${pick.penalty} Penalty` : ", no rule warnings") +
           (pick.wants ? ", asked to work it" : "") +
           (rejections.size ? `; ${[...rejections.values()].reduce((x, y) => x + y, 0)} others excluded by Hard Rules` : ""),
@@ -117,7 +131,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
   return { added: sortAssignments(added, shiftsById), explanations, unfilled };
 }
 
-const RULE_ORDER: RuleKind[] = ["requiredTags", "timeOff", "overlap", "minRest", "maxConsecutiveDays", "maxShiftsPerWeek", "headcount", "preference"];
+const RULE_ORDER: RuleKind[] = ["requiredTags", "timeOff", "overlap", "minRest", "maxConsecutiveDays", "restAfterBlock", "maxShiftsPerWeek", "headcount", "preference"];
 const order = (r: RuleKind) => RULE_ORDER.indexOf(r);
 const round = (n: number) => Math.round(n * 100) / 100;
 

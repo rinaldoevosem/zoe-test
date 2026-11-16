@@ -59,12 +59,23 @@ export interface ThresholdRule {
   value: number;
 }
 
+/** Rest after Block: after at least `minBlockDays` consecutive working days, at least `daysOff` days off. */
+export interface BlockRestRule {
+  enabled: boolean;
+  hard: boolean;
+  minBlockDays: number;
+  daysOff: number;
+}
+
 export interface RuleConfig {
   minRestHours: ThresholdRule;
   maxConsecutiveDays: ThresholdRule;
   maxShiftsPerWeek: ThresholdRule;
   /** Whether Preferences are honoured; always Soft. */
   preferences: { enabled: boolean };
+  restAfterBlock: BlockRestRule;
+  /** Auto-fill keeps a Staff Member on the same Shift Type on consecutive days (ADR-0009). */
+  continuity: { enabled: boolean };
 }
 
 export const DEFAULT_RULES: RuleConfig = {
@@ -72,7 +83,19 @@ export const DEFAULT_RULES: RuleConfig = {
   maxConsecutiveDays: { enabled: true, hard: false, value: 5 },
   maxShiftsPerWeek: { enabled: true, hard: false, value: 5 },
   preferences: { enabled: true },
+  restAfterBlock: { enabled: false, hard: true, minBlockDays: 7, daysOff: 7 },
+  continuity: { enabled: false },
 };
+
+/** Rule settings as stored may predate newer Rules; missing ones take their defaults (off). */
+export function withRuleDefaults(stored: Partial<RuleConfig> | null | undefined): RuleConfig {
+  const out = { ...DEFAULT_RULES } as RuleConfig;
+  for (const k of Object.keys(DEFAULT_RULES) as (keyof RuleConfig)[]) {
+    const v = stored?.[k];
+    if (v && typeof v === "object") (out as unknown as Record<string, unknown>)[k] = { ...DEFAULT_RULES[k], ...v };
+  }
+  return out;
+}
 
 /** A self-contained snapshot of everything the Rule engine needs to judge a schedule. */
 export interface ScheduleContext {
@@ -94,6 +117,7 @@ export type RuleKind =
   | "minRest"
   | "maxConsecutiveDays"
   | "maxShiftsPerWeek"
+  | "restAfterBlock"
   | "preference"
   | "headcount";
 

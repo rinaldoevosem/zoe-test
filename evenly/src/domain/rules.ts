@@ -6,10 +6,10 @@
  *   checkAssignment(ctx, assignment)   → Violations the Assignment would newly introduce
  *   newViolations(before, after)       → Violations present in `after` but not in `before`
  */
-import { addDays, shiftInterval, weekStart } from "./time";
+import { addDays, daysBetween, shiftInterval, weekStart } from "./time";
 import type { Assignment, Preference, ScheduleContext, Shift, StaffId, Violation } from "./types";
 
-const SOFT_PENALTY = { maxConsecutiveDays: 5, maxShiftsPerWeek: 5, minRest: 8, preference: 3 } as const;
+const SOFT_PENALTY = { maxConsecutiveDays: 5, maxShiftsPerWeek: 5, minRest: 8, restAfterBlock: 8, preference: 3 } as const;
 const HARD_PENALTY = 1000;
 
 export function evaluate(ctx: ScheduleContext): Violation[] {
@@ -145,6 +145,23 @@ function evaluateStaff(ctx: ScheduleContext, staffId: StaffId, shifts: Shift[]):
         const s = timed.find((t) => t.s.date === d)!.s;
         out.push(v("maxConsecutiveDays", consec.hard ? "hard" : "soft", staffId, s,
           `${member.name} would work ${run} days in a row (maximum ${consec.value})`, SOFT_PENALTY.maxConsecutiveDays));
+      }
+    }
+  }
+
+  const block = ctx.rules.restAfterBlock;
+  if (block?.enabled) {
+    const dates = [...new Set(shifts.map((s) => s.date))].sort();
+    let runLength = 0;
+    for (let i = 0; i < dates.length; i++) {
+      runLength = i > 0 && addDays(dates[i - 1], 1) === dates[i] ? runLength + 1 : 1;
+      const next = dates[i + 1];
+      if (!next || addDays(dates[i], 1) === next || runLength < block.minBlockDays) continue;
+      const off = daysBetween(dates[i], next) - 1;
+      if (off < block.daysOff) {
+        const s = timed.find((t) => t.s.date === next)!.s;
+        out.push(v("restAfterBlock", block.hard ? "hard" : "soft", staffId, s,
+          `${member.name} would get ${off} day${off === 1 ? "" : "s"} off after a ${runLength}-day Block (minimum ${block.daysOff})`, SOFT_PENALTY.restAfterBlock));
       }
     }
   }
