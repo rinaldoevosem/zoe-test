@@ -19,6 +19,7 @@ A **locked v1 spec** — every decision needed to take Zoe live in **one pilot c
 
 - [Incumbent landscape research](../../docs/research/0001-qgenda-landscape.md): QGenda's capabilities inventoried; top user pains are mobile logouts, auto-scheduler conflict churn, slow trade approval, stale calendar sync, admin complexity, weak fairness reporting.
 - [v0 prototype spec](../zoe-platform/spec.md): 40-story v0 built and tested (scheduling, Auto-fill, trades, time off, on-call, ICS, reports, audit) — proves the single-Rule-engine approach.
+- [Research: compliance for scheduling data](issues/05-compliance-hosting-research.md): schedules aren't PHI; stay PHI-free by design; SOC 2 Type II is the buyer norm; v1 needs SSO+MFA, audit, encryption, US hosting, one pen test.
 - [Provisional ADRs 0001–0008](../../docs/adr/): agent-decided under delegated ownership; **re-opened** by "Confirm or overturn the provisional ADRs".
 
 ## Not yet specified
