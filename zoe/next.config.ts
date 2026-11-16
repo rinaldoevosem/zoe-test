@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // PGlite ships WASM + data files that must be loaded from node_modules at runtime.
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Serverless hosts only ship traced files: keep the SQL migrations and PGlite's wasm/data bundle.
+  outputFileTracingIncludes: { "/**": ["./drizzle/**/*", "./node_modules/@electric-sql/pglite/dist/*.{wasm,data}"] },
   turbopack: {
     rules: {
       "*.css": {

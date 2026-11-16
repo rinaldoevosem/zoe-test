@@ -42,21 +42,23 @@ export async function ensureSeeded(db: DB) {
 }
 
 export async function seed(db: DB, now: number) {
-  const [org] = await db.insert(schema.organizations).values({ name: "Riverside Health" }).returning();
+  // Fixed ids for the demo people, so a signed-in cookie stays valid on any fresh, re-seeded instance (serverless previews).
+  const [org] = await db.insert(schema.organizations).values({ id: "demo-org", name: "Riverside Health" }).returning();
   const [dept] = await db.insert(schema.departments).values({
+    id: "demo-dept",
     organizationId: org.id,
     name: "Anesthesiology",
     timeZone: TZ,
     settings: { rules: DEFAULT_RULES, tradePolicy: "auto", requestLimit: 3 },
   }).returning();
   const staff = await db.insert(schema.staffMembers).values(STAFF.map((s, i) => ({
-    organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email, clinicalRole: s.role, fte: s.fte, tags: s.tags,
+    id: `demo-staff-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email, clinicalRole: s.role, fte: s.fte, tags: s.tags,
     phone: `+1 555 01${String(i).padStart(2, "0")}`,
   }))).returning();
   const users = await db.insert(schema.users).values([
-    { organizationId: org.id, departmentId: dept.id, name: "Pat Rivera (Scheduler)", email: "pat.rivera@riverside.example", permission: "scheduler" as const },
+    { id: "demo-user-scheduler", organizationId: org.id, departmentId: dept.id, name: "Pat Rivera (Scheduler)", email: "pat.rivera@riverside.example", permission: "scheduler" as const },
     ...staff.map((s, i) => ({
-      organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email!, permission: (i === 0 ? "admin" : "staff") as "admin" | "staff", staffMemberId: s.id,
+      id: `demo-user-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email!, permission: (i === 0 ? "admin" : "staff") as "admin" | "staff", staffMemberId: s.id,
     })),
   ]).returning();
   await db.insert(schema.shiftTypes).values(SHIFT_TYPES.map((t, i) => ({ organizationId: org.id, departmentId: dept.id, sortOrder: i, ...t })));
