@@ -1,0 +1,537 @@
+<title>Evenly Pilot Decisions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one calm reading column; a sticky progress bar; each decision is a card of tappable options, A marked as suggested. */
+:root {
+  --bg: #f5f8f7;
+  --surface: #ffffff;
+  --ink: #12211f;
+  --muted: #546663;
+  --line: #d9e3e1;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3f2ef;
+  --suggest: #8a5a00;
+  --suggest-soft: #fdf1d6;
+  --warn: #9a3412;
+  --warn-soft: #fdeee6;
+  --ok: #166534;
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1716; --surface: #142220; --ink: #e6efed; --muted: #9db1ad; --line: #24403c;
+    --accent: #3fbfae; --accent-ink: #062320; --accent-soft: #173a35;
+    --suggest: #f2c46b; --suggest-soft: #3a2e14; --warn: #f4a37a; --warn-soft: #3b2219; --ok: #7fd49a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1716; --surface: #142220; --ink: #e6efed; --muted: #9db1ad; --line: #24403c;
+  --accent: #3fbfae; --accent-ink: #062320; --accent-soft: #173a35;
+  --suggest: #f2c46b; --suggest-soft: #3a2e14; --warn: #f4a37a; --warn-soft: #3b2219; --ok: #7fd49a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--font-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(1.9rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+h3 { font-size: 1.08rem; font-weight: 700; line-height: 1.3; }
+p { margin: 0; }
+.brand { display: flex; align-items: center; gap: 10px; font: 800 1.05rem var(--font-display); color: var(--accent); letter-spacing: -0.01em; }
+.brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+.brand-mark span { display: block; width: 14px; height: 2.5px; background: var(--accent-ink); border-radius: 2px; box-shadow: 0 -5px 0 var(--accent-ink), 0 5px 0 var(--accent-ink); }
+header.intro { display: grid; gap: 14px; }
+.lede { color: var(--muted); max-width: 62ch; font-size: 1.05rem; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 0.92rem; }
+.facts b { color: var(--ink); font-weight: 600; }
+.legend { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.92rem; color: var(--muted); }
+.chip { display: inline-flex; align-items: center; gap: 4px; font: 600 0.72rem var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; background: var(--suggest-soft); color: var(--suggest); white-space: nowrap; }
+
+.tabs { display: flex; gap: 6px; }
+.tab { font: 600 0.92rem var(--font-body); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.progress { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; display: grid; gap: 6px; border-bottom: 1px solid var(--line); }
+.progress-row { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.about { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+label.field { display: grid; gap: 6px; font-size: 0.9rem; font-weight: 600; min-width: 0; }
+label.field small { font-weight: 400; color: var(--muted); }
+input[type="text"], select, textarea { font: 400 1rem var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 72px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, .opt:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+section.group { display: grid; gap: 14px; }
+.group-head { display: grid; gap: 4px; padding-top: 6px; }
+.group-head p { color: var(--muted); font-size: 0.95rem; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.q.answered { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.q-head { display: grid; gap: 6px; }
+.q-num { font: 600 0.75rem var(--font-body); color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.q-why { color: var(--muted); font-size: 0.95rem; }
+.opts { display: grid; gap: 8px; }
+.opt { position: relative; display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; background: var(--surface); transition: border-color .15s, background .15s; }
+.opt:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.opt input { position: absolute; opacity: 0; pointer-events: none; }
+.opt .letter { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font: 700 0.9rem var(--font-display); background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.opt .txt { display: grid; gap: 2px; min-width: 0; }
+.opt .t { font-weight: 600; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+.opt .d { color: var(--muted); font-size: 0.93rem; }
+.opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.opt:has(input:checked) .letter { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.opt.unsure { grid-template-columns: 30px 1fr; padding-block: 9px; }
+.opt.unsure .t { font-weight: 500; color: var(--muted); }
+details.note summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; font-weight: 600; list-style: none; }
+details.note summary::-webkit-details-marker { display: none; }
+details.note textarea { margin-top: 8px; }
+
+.actions { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; }
+button { font: 600 0.95rem var(--font-body); border-radius: 10px; padding: 11px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button:disabled { opacity: .55; cursor: not-allowed; }
+.status { font-size: 0.93rem; color: var(--muted); }
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+.banner { border-radius: 12px; padding: 12px 14px; font-size: 0.93rem; background: var(--warn-soft); color: var(--warn); }
+.copy-fallback { width: 100%; min-height: 160px; font: 400 0.85rem ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* Owner results */
+.results { display: grid; gap: 16px; }
+.people { display: grid; gap: 8px; }
+.person { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: 0.93rem; }
+.person span { color: var(--muted); }
+.tally { display: grid; gap: 6px; }
+.tally-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) 34px; gap: 10px; align-items: center; font-size: 0.9rem; }
+.tally-row .lbl { min-width: 0; overflow-wrap: anywhere; }
+.tally-row .track { grid-column: 2 / 3; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.tally-row .track i { display: block; height: 100%; background: var(--accent); }
+.tally-row .n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.notes-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 0.9rem; display: grid; gap: 4px; }
+.empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 18px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><span></span></div>Evenly</div>
+    <h1>Help us shape your first Evenly rollout</h1>
+    <p class="lede">You've seen the preview. These choices decide what we build first and how your team moves over. Pick the option that fits you best. Where you're unsure, choose the suggested answer or "Not sure, let's talk".</p>
+    <div class="facts"><span><b>16</b> short questions</span><span>About <b>10 minutes</b></span><span>You can change your answers later</span></div>
+    <div class="legend"><span class="chip">Suggested</span> Option A is our recommendation for each question.</div>
+    <div class="tabs" id="tabs" hidden>
+      <button class="tab" id="tab-form" aria-selected="true" type="button">My answers</button>
+      <button class="tab" id="tab-results" aria-selected="false" type="button">All responses <span id="resp-count"></span></button>
+    </div>
+  </header>
+
+  <div id="view-form" class="wrap" style="padding:0">
+    <div class="progress" aria-live="polite">
+      <div class="progress-row"><span id="progress-text">0 of 16 answered</span><span id="save-hint">Not saved yet</span></div>
+      <div class="bar"><i id="progress-bar"></i></div>
+    </div>
+
+    <div id="access-banner" class="banner" hidden></div>
+
+    <fieldset class="about">
+      <h2>About you</h2>
+      <div class="grid2">
+        <label class="field" for="who-name">Your name
+          <input type="text" id="who-name" autocomplete="name" placeholder="Dr. Jane Smith">
+        </label>
+        <label class="field" for="who-role">Your role
+          <select id="who-role">
+            <option value="">Choose one</option>
+            <option>Practice or clinic owner</option>
+            <option>Department chair or medical director</option>
+            <option>Physician</option>
+            <option>Scheduler</option>
+            <option>Practice manager or administrator</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label class="field" for="who-org">Organization or department
+          <input type="text" id="who-org" autocomplete="organization" placeholder="Riverside Health, Anesthesiology">
+        </label>
+        <label class="field" for="who-today">What do you schedule with today? <small>For example QGenda, spreadsheets, email</small>
+          <input type="text" id="who-today" placeholder="QGenda">
+        </label>
+      </div>
+    </fieldset>
+
+    <div id="questions" class="wrap" style="padding:0"></div>
+
+    <div class="actions">
+      <label class="field" for="final-notes">Anything else we should know? <small>Rules that are unique to your team, worries, must-haves</small>
+        <textarea id="final-notes" placeholder="We never schedule anyone for call the night before a vacation."></textarea>
+      </label>
+      <div class="btns">
+        <button class="primary" id="btn-save" type="button">Save my answers</button>
+        <button id="btn-suggest" type="button">Use suggested answers for the rest</button>
+        <button id="btn-copy" type="button">Copy my answers</button>
+      </div>
+      <p class="status" id="status" role="status">Your answers are saved to this project when you tap Save.</p>
+      <textarea id="copy-fallback" class="copy-fallback" readonly hidden aria-label="Your answers as text"></textarea>
+    </div>
+  </div>
+
+  <div id="view-results" class="results" hidden>
+    <h2>All responses</h2>
+    <p class="status" id="results-status">Loading responses…</p>
+    <div class="people" id="people"></div>
+    <div id="tallies" class="results"></div>
+  </div>
+</div>
+
+<script>
+const UNSURE = { l: "?", t: "Not sure, let's talk" };
+const GROUPS = [
+  { title: "Getting started", blurb: "Where and when Evenly goes live first.", qs: [
+    { key: "start", title: "Where should Evenly start?", why: "Starting with one team lets us fine-tune the rules before everyone else moves over.",
+      opts: [
+        { t: "One department first", d: "A pilot with one team, then expand once it runs smoothly." },
+        { t: "Several departments at once", d: "Faster rollout, but more setup and training up front." },
+        { t: "The whole organization", d: "The biggest change at once, with the longest setup." } ] },
+    { key: "team", title: "Which team should go first?", why: "The first team decides which scheduling rules we build first.",
+      opts: [
+        { t: "Anesthesiology", d: "Physicians and nurse anesthetists, with operating room and on-call coverage. The preview is built around this team." },
+        { t: "Emergency medicine", d: "Round-the-clock shifts with fewer on-call rules." },
+        { t: "Hospital medicine", d: "Block schedules, for example 7 days on and 7 days off." } ] },
+    { key: "golive", title: "When would you like the first team using Evenly?", why: "This sets how much we can include in the first version.",
+      opts: [
+        { t: "Around May 2027", d: "About six months: time to set up your rules, test on real schedules and train the team." },
+        { t: "Within three months", d: "Possible with a smaller first version." },
+        { t: "Later in 2027", d: "More ready on day one, but a longer wait." } ] },
+  ]},
+  { title: "Who gets scheduled", blurb: "The people and skills Evenly needs to know about.", qs: [
+    { key: "who", title: "Who should Evenly schedule in the first version?", why: "Each group has its own kind of rules, so adding one adds time.",
+      opts: [
+        { t: "Physicians and advanced practice providers", d: "Doctors, nurse anesthetists, PAs and NPs. Residents and nursing units come later." },
+        { t: "Add nursing units", d: "Nurse self-scheduling, float pool and staffing to patient volume. Roughly doubles the first version." },
+        { t: "Add residents and trainees", d: "Rotations and duty-hour limits. A large addition." } ] },
+    { key: "certs", title: "Should Evenly keep track of certifications?", why: "For example, only pediatric-certified anesthesiologists can cover the pediatric room.",
+      opts: [
+        { t: "Track skills with expiry dates", d: "Evenly won't schedule someone into work their lapsed certification no longer covers, and reminds them before it expires." },
+        { t: "Track skills, no dates", d: "As in the preview: a skill is either on or off." },
+        { t: "Full credentialing", d: "Privileges, insurance enrollment and documents. A product of its own; we'd connect to the system you already use." } ] },
+  ]},
+  { title: "Building the schedule", blurb: "How the schedule gets made and what fair means to your team.", qs: [
+    { key: "samples", title: "Can you share past schedules and your written rules?", why: "Real examples are how we check that Evenly follows your rules and spreads work fairly.",
+      opts: [
+        { t: "Yes, three months of schedules and our rules", d: "Names can be removed first." },
+        { t: "Only our written rules", d: "We'd test with realistic made-up schedules instead." },
+        { t: "Neither for now", d: "We'd start from common rules for your specialty." } ] },
+    { key: "autofill", title: "How should the schedule get built?", why: "Evenly can draft the schedule for you. The question is how much a person stays in charge.",
+      opts: [
+        { t: "Evenly drafts, a person approves", d: "Evenly fills open shifts and says why it chose each person. A scheduler reviews, adjusts and publishes." },
+        { t: "Fully automatic", d: "Evenly builds and publishes without a review step." },
+        { t: "By hand only", d: "Schedulers fill every shift. Evenly only checks the rules." } ] },
+    { key: "wants", title: "When someone asks to work a particular day, how much should it count?", why: "Requests to avoid a day already count. This is about requests to work one.",
+      opts: [
+        { t: "Only as a tie-breaker", d: "Granted when it's otherwise a fair choice. Nobody gets extra shifts just by asking." },
+        { t: "As much as a day-off request", d: "More requests granted, but workloads may become less even." } ] },
+    { key: "shifttypes", title: "Who can create or change shift types?", why: "Shift types are the building blocks, such as \"OB Night, 7 pm to 7 am\". Changing one can affect shifts already published.",
+      opts: [
+        { t: "Administrators only", d: "Schedulers ask an administrator. Fewer accidental changes." },
+        { t: "Schedulers too", d: "Quicker changes, with more people able to alter the template." } ] },
+  ]},
+  { title: "Day to day for your team", blurb: "Swaps, alerts and phones.", qs: [
+    { key: "swaps", title: "How should shift swaps be approved?", why: "Slow swap approvals are a common complaint about current tools.",
+      opts: [
+        { t: "Automatically, when no rules are broken", d: "If both people are qualified and rested, the swap goes through right away and the scheduler is told. Any department can switch to manual approval." },
+        { t: "A scheduler approves every swap", d: "More control, but people wait for an answer." } ] },
+    { key: "alerts", title: "How should Evenly notify people?", why: "Too many duplicate alerts is another top complaint.",
+      opts: [
+        { t: "In the app and by email; text messages only when urgent", d: "Urgent means, for example, an on-call shift with nobody covering it in the next 24 hours. Everyone can set quiet hours." },
+        { t: "Email only", d: "Simple, but urgent gaps may be missed." },
+        { t: "Text messages for everything", d: "Hard to miss, but noisy." } ] },
+    { key: "phone", title: "How should staff use Evenly on their phones?", why: "Most people will check their schedule on a phone.",
+      opts: [
+        { t: "Add it to the home screen from the browser", d: "Works on iPhone and Android with no app store, and stays signed in. Ready sooner." },
+        { t: "Download it from the App Store and Google Play", d: "Familiar, but adds months and app store reviews to the first version." } ] },
+  ]},
+  { title: "Connections and switching over", blurb: "What Evenly talks to, and how you move in.", qs: [
+    { key: "connect", title: "What must connect to Evenly on day one?", why: "Each connection adds setup with your IT team.",
+      opts: [
+        { t: "Personal calendars and an on-call list for the hospital", d: "Shifts appear in Google, Outlook or Apple Calendar. The operator and paging system can see who is on call." },
+        { t: "Option A plus payroll", d: "Also send worked shifts and call pay to your payroll or timekeeping system." },
+        { t: "Option B plus Epic", d: "Also keep Epic's on-call directory up to date from Evenly." } ] },
+    { key: "switch", title: "How should we move you over from your current system?", why: "Bringing recent history over keeps fairness counts going from where they are today.",
+      opts: [
+        { t: "We set it up and run both systems side by side for a month", d: "We bring over staff, shift types and recent history, and you compare before switching off the old system." },
+        { t: "You set it up with a guide", d: "Self-service setup, with our help when you need it." },
+        { t: "Start fresh at the next month", d: "Nothing brought over, so fairness counts start at zero." } ] },
+  ]},
+  { title: "Security and sign-in", blurb: "Logging in and where your data lives.", qs: [
+    { key: "signin", title: "How should people sign in?", why: "Being logged out on the phone is the most common complaint about current tools.",
+      opts: [
+        { t: "With their hospital account", d: "The same login as other hospital systems (for example Microsoft), with a second check such as a code on the phone. Phones stay signed in." },
+        { t: "A separate Evenly login", d: "Email and password, managed in Evenly." } ] },
+    { key: "hosting", title: "Where should schedule data be kept?", why: "Evenly holds schedules only, never patient information.",
+      opts: [
+        { t: "A secure US cloud that we manage", d: "Encrypted and kept in the US. Your IT team has nothing to run." },
+        { t: "Your own servers or cloud", d: "More control, but a longer setup that your IT team runs." } ] },
+  ]},
+];
+const ALL = GROUPS.flatMap(g => g.qs);
+const TOTAL = ALL.length;
+const LETTERS = ["A", "B", "C", "D"];
+
+// ---------- render the form ----------
+const qRoot = document.getElementById("questions");
+let n = 0;
+for (const g of GROUPS) {
+  const sec = document.createElement("section");
+  sec.className = "group";
+  const head = document.createElement("div");
+  head.className = "group-head";
+  const h = document.createElement("h2"); h.textContent = g.title;
+  const p = document.createElement("p"); p.textContent = g.blurb;
+  head.append(h, p); sec.append(head);
+  for (const q of g.qs) {
+    n += 1;
+    const fs = document.createElement("fieldset");
+    fs.className = "q"; fs.id = "q-" + q.key;
+    const qh = document.createElement("div"); qh.className = "q-head";
+    const num = document.createElement("span"); num.className = "q-num"; num.textContent = "Question " + n + " of " + TOTAL;
+    const h3 = document.createElement("h3"); h3.textContent = q.title; h3.id = "title-" + q.key;
+    fs.setAttribute("aria-labelledby", "title-" + q.key);
+    const why = document.createElement("p"); why.className = "q-why"; why.textContent = q.why;
+    qh.append(num, h3, why);
+    const opts = document.createElement("div"); opts.className = "opts";
+    const all = [...q.opts.map((o, i) => ({ ...o, l: LETTERS[i] })), UNSURE];
+    for (const o of all) {
+      const id = "q-" + q.key + "-" + (o.l === "?" ? "unsure" : o.l);
+      const lab = document.createElement("label");
+      lab.className = "opt" + (o.l === "?" ? " unsure" : ""); lab.htmlFor = id;
+      const inp = document.createElement("input");
+      inp.type = "radio"; inp.name = q.key; inp.id = id; inp.value = o.l;
+      const letter = document.createElement("span"); letter.className = "letter"; letter.textContent = o.l; letter.setAttribute("aria-hidden", "true");
+      const txt = document.createElement("span"); txt.className = "txt";
+      const t = document.createElement("span"); t.className = "t"; t.textContent = o.t;
+      if (o.l === "A") { const c = document.createElement("span"); c.className = "chip"; c.textContent = "Suggested"; t.append(c); }
+      txt.append(t);
+      if (o.d) { const d = document.createElement("span"); d.className = "d"; d.textContent = o.d; txt.append(d); }
+      lab.append(inp, letter, txt); opts.append(lab);
+    }
+    const det = document.createElement("details"); det.className = "note";
+    const sum = document.createElement("summary"); sum.textContent = "Add a note";
+    const ta = document.createElement("textarea"); ta.id = "note-" + q.key; ta.setAttribute("aria-label", "Note for: " + q.title);
+    det.append(sum, ta);
+    fs.append(qh, opts, det); sec.append(fs);
+  }
+  qRoot.append(sec);
+}
+
+// ---------- form state ----------
+const $ = id => document.getElementById(id);
+function readForm() {
+  const answers = {}, notes = {};
+  for (const q of ALL) {
+    const c = document.querySelector('input[name="' + q.key + '"]:checked');
+    if (c) answers[q.key] = c.value;
+    const v = $("note-" + q.key).value.trim();
+    if (v) notes[q.key] = v;
+  }
+  return {
+    name: $("who-name").value.trim(), role: $("who-role").value, organization: $("who-org").value.trim(),
+    currentTool: $("who-today").value.trim(), finalNotes: $("final-notes").value.trim(), answers, notes,
+  };
+}
+function fillForm(d) {
+  if (!d) return;
+  $("who-name").value = d.name || ""; $("who-role").value = d.role || ""; $("who-org").value = d.organization || "";
+  $("who-today").value = d.currentTool || ""; $("final-notes").value = d.finalNotes || "";
+  for (const q of ALL) {
+    const a = d.answers && d.answers[q.key];
+    const el = a && $("q-" + q.key + "-" + (a === "?" ? "unsure" : a));
+    if (el) el.checked = true;
+    const note = d.notes && d.notes[q.key];
+    $("note-" + q.key).value = note || "";
+    if (note) $("note-" + q.key).closest("details").open = true;
+  }
+  refresh();
+}
+function refresh() {
+  const { answers } = readForm();
+  const done = Object.keys(answers).length;
+  $("progress-text").textContent = done + " of " + TOTAL + " answered";
+  $("progress-bar").style.width = Math.round(done / TOTAL * 100) + "%";
+  for (const q of ALL) $("q-" + q.key).classList.toggle("answered", !!answers[q.key]);
+}
+
+const DRAFT_KEY = "evenly-pilot-decisions-draft";
+let dirty = false;
+function saveDraft() { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(readForm())); } catch (e) {} }
+try { const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); if (draft) fillForm(draft); } catch (e) {}
+document.addEventListener("input", e => {
+  if (!e.target.closest("#view-form")) return;
+  dirty = true; refresh(); saveDraft();
+  $("save-hint").textContent = "Unsaved changes";
+});
+document.addEventListener("change", e => { if (e.target.type === "radio") { dirty = true; refresh(); saveDraft(); $("save-hint").textContent = "Unsaved changes"; } });
+
+$("btn-suggest").addEventListener("click", () => {
+  let filled = 0;
+  for (const q of ALL) {
+    if (!document.querySelector('input[name="' + q.key + '"]:checked')) { $("q-" + q.key + "-A").checked = true; filled++; }
+  }
+  dirty = true; refresh(); saveDraft();
+  setStatus(filled ? "Filled " + filled + " unanswered question" + (filled === 1 ? "" : "s") + " with the suggested answer. Review them, then save." : "Every question already has an answer.");
+});
+
+function asText(d) {
+  const lines = ["Evenly pilot decisions", (d.name || "(no name)") + (d.role ? ", " + d.role : "") + (d.organization ? ", " + d.organization : "")];
+  if (d.currentTool) lines.push("Scheduling today with: " + d.currentTool);
+  lines.push("");
+  ALL.forEach((q, i) => {
+    const a = d.answers[q.key];
+    const opt = a && a !== "?" ? q.opts[LETTERS.indexOf(a)] : null;
+    lines.push((i + 1) + ". " + q.title);
+    lines.push("   " + (a ? (a === "?" ? "Not sure, let's talk" : a + ": " + opt.t) : "(no answer)"));
+    if (d.notes[q.key]) lines.push("   Note: " + d.notes[q.key]);
+  });
+  if (d.finalNotes) { lines.push(""); lines.push("Anything else: " + d.finalNotes); }
+  return lines.join("\n");
+}
+$("btn-copy").addEventListener("click", () => {
+  const text = asText(readForm());
+  const fb = $("copy-fallback");
+  const show = () => { fb.value = text; fb.hidden = false; fb.focus(); fb.select(); setStatus("Select all the text below and copy it."); };
+  try {
+    navigator.clipboard.writeText(text).then(() => setStatus("Copied. Paste your answers into an email or message to us.", "ok"), show);
+  } catch (e) { show(); }
+});
+
+function setStatus(msg, kind) { const s = $("status"); s.textContent = msg; s.className = "status" + (kind ? " " + kind : ""); }
+
+// ---------- saving to the project database ----------
+let db = null, uid = null, canSave = true;
+function blockSaving(msg) {
+  canSave = false;
+  $("btn-save").disabled = true;
+  const b = $("access-banner"); b.textContent = msg; b.hidden = false;
+  $("save-hint").textContent = "Copy your answers to send them";
+}
+$("btn-save").addEventListener("click", async () => {
+  if (!canSave) return;
+  const d = readForm();
+  if (!d.name) { setStatus("Add your name at the top so we know whose answers these are.", "warn"); $("who-name").focus(); return; }
+  if (!db || !uid) { setStatus("Still connecting to the project. Try again in a moment, or copy your answers.", "warn"); return; }
+  const btn = $("btn-save"); btn.disabled = true; setStatus("Saving…");
+  try {
+    await db.doc("responses/" + uid).set({ ...d, answeredCount: Object.keys(d.answers).length, savedAt: new Date().toISOString() });
+    dirty = false;
+    const missing = TOTAL - Object.keys(d.answers).length;
+    setStatus(missing ? "Saved. " + missing + " question" + (missing === 1 ? " is" : "s are") + " still open; you can come back and save again." : "Saved. Thank you! You can change your answers and save again any time.", "ok");
+    $("save-hint").textContent = "Saved";
+  } catch (e) {
+    if (e && (e.code === "invalid_argument" || e.code === "not_granted" || e.code === "revoked")) {
+      blockSaving("Your access to this page is view-only, so answers can't be saved here. Use Copy my answers and send them to us, or ask us for edit access.");
+      setStatus("Not saved. Copy your answers instead.", "warn");
+    } else if (e && e.code === "unavailable") {
+      setStatus("Couldn't reach the project just now. Try Save again in a moment.", "warn");
+    } else {
+      setStatus("Not saved (" + ((e && e.code) || "error") + "). Copy your answers so nothing is lost.", "warn");
+    }
+  } finally { if (canSave) btn.disabled = false; }
+});
+
+(async () => {
+  const claude = window.claude;
+  if (!claude || !claude.use) { blockSaving("Answers can't be saved from this view. Use Copy my answers and send them to us."); return; }
+  const [dbNs, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  db = dbNs;
+  uid = user ? await user.id() : null;
+  if (!db || !uid) { blockSaving("Sign in to Claude to save your answers here, or use Copy my answers and send them to us."); return; }
+  const canWrite = await user.can("data.write");
+  if (canWrite === false) { blockSaving("Your access to this page is view-only, so answers can't be saved here. Use Copy my answers and send them to us, or ask us for edit access."); }
+
+  // Bring back answers saved earlier, unless the person has already started changing things.
+  try {
+    const snap = await db.doc("responses/" + uid).get();
+    if (snap.exists && !dirty) { fillForm(snap.data()); $("save-hint").textContent = "Saved"; setStatus("Welcome back. These are the answers you saved.", "ok"); }
+  } catch (e) {}
+
+  if (await user.isOwner()) startResults();
+})();
+
+// ---------- owner view: everyone's responses ----------
+function startResults() {
+  $("tabs").hidden = false;
+  const show = which => {
+    $("view-form").hidden = which !== "form"; $("view-results").hidden = which !== "results";
+    $("tab-form").setAttribute("aria-selected", String(which === "form"));
+    $("tab-results").setAttribute("aria-selected", String(which === "results"));
+  };
+  $("tab-form").addEventListener("click", () => show("form"));
+  $("tab-results").addEventListener("click", () => show("results"));
+  const timer = setTimeout(() => { $("results-status").textContent = "Responses can't be reached yet. They'll appear here when the connection returns."; }, 10000);
+  db.collection("responses").onSnapshot(snap => {
+    if (!snap.metadata.fromCache) clearTimeout(timer);
+    renderResults(snap.docs.map(d => d.data()));
+  }, err => { clearTimeout(timer); $("results-status").textContent = "Responses stopped updating (" + err.code + "). Reopen the page to see the latest."; });
+}
+function renderResults(rows) {
+  rows = rows.slice().sort((a, b) => String(b.savedAt || "").localeCompare(String(a.savedAt || "")));
+  $("resp-count").textContent = "(" + rows.length + ")";
+  $("results-status").textContent = rows.length ? rows.length + " response" + (rows.length === 1 ? "" : "s") + " so far. Updates live." : "";
+  const people = $("people"); people.replaceChildren();
+  const tallies = $("tallies"); tallies.replaceChildren();
+  if (!rows.length) {
+    const e = document.createElement("p"); e.className = "empty";
+    e.textContent = "No responses yet. Share this page with your client's stakeholders; each person's saved answers appear here.";
+    people.append(e); return;
+  }
+  for (const r of rows) {
+    const div = document.createElement("div"); div.className = "person";
+    const who = document.createElement("strong"); who.textContent = (r.name || "Unnamed") + (r.role ? ", " + r.role : "");
+    const meta = document.createElement("span");
+    meta.textContent = [r.organization, (r.answeredCount ?? 0) + "/" + TOTAL + " answered", r.savedAt ? new Date(r.savedAt).toLocaleString() : ""].filter(Boolean).join(" · ");
+    div.append(who, meta); people.append(div);
+  }
+  ALL.forEach((q, i) => {
+    const card = document.createElement("div"); card.className = "q";
+    const h = document.createElement("h3"); h.textContent = (i + 1) + ". " + q.title;
+    const t = document.createElement("div"); t.className = "tally";
+    const choices = [...q.opts.map((o, k) => ({ l: LETTERS[k], t: o.t })), UNSURE];
+    for (const c of choices) {
+      const count = rows.filter(r => r.answers && r.answers[q.key] === c.l).length;
+      const row = document.createElement("div"); row.className = "tally-row";
+      const l = document.createElement("strong"); l.textContent = c.l;
+      const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = c.t + (c.l === "A" ? " (suggested)" : "");
+      const nEl = document.createElement("span"); nEl.className = "n"; nEl.textContent = count;
+      const tr = document.createElement("div"); tr.className = "track"; const bar = document.createElement("i"); bar.style.width = (count / rows.length * 100) + "%"; tr.append(bar);
+      row.append(l, lbl, nEl, document.createElement("span"), tr); t.append(row);
+    }
+    card.append(h, t);
+    const notes = rows.filter(r => r.notes && r.notes[q.key]);
+    if (notes.length) {
+      const ul = document.createElement("ul"); ul.className = "notes-list";
+      for (const r of notes) { const li = document.createElement("li"); li.textContent = (r.name || "Unnamed") + ": " + r.notes[q.key]; ul.append(li); }
+      card.append(ul);
+    }
+    tallies.append(card);
+  });
+  const extra = rows.filter(r => r.finalNotes);
+  if (extra.length) {
+    const card = document.createElement("div"); card.className = "q";
+    const h = document.createElement("h3"); h.textContent = "Anything else";
+    const ul = document.createElement("ul"); ul.className = "notes-list";
+    for (const r of extra) { const li = document.createElement("li"); li.textContent = (r.name || "Unnamed") + ": " + r.finalNotes; ul.append(li); }
+    card.append(h, ul); tallies.append(card);
+  }
+}
+</script>
