@@ -81,6 +81,13 @@ describe("Shift Types", () => {
     expect(febPain).toEqual([]);
   });
 
+  test("adding a required Tag to a Shift Type re-judges the published Shifts it already has", async () => {
+    const [cardiac] = await (await import("./settings")).listShiftTypes(db, admin).then((ts) => ts.filter((t) => t.code === "CV"));
+    const result = await saveShiftType(db, admin, { ...cardiac, requiredTags: [...cardiac.requiredTags, "ecmo"] }, NOW);
+    expect(result.newHardViolations.length).toBeGreaterThan(0);
+    expect(result.newHardViolations.every((v) => v.shiftLabel === "Cardiac" && v.message.includes("ecmo"))).toBe(true);
+  });
+
   test("Shift Types are validated and only admins may change them", async () => {
     await expect(saveShiftType(db, admin, { name: "Bad", code: "BAD", color: "sky", startMinute: 600, endMinute: 500, weekdays: [1], requiredTags: [], headcount: 1, weight: 1, onCall: false, active: true }))
       .rejects.toThrow("End must be after start");

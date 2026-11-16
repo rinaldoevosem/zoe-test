@@ -42,10 +42,13 @@ export interface TimeOff {
   endDate: LocalDate;
 }
 
+export const PREFERENCE_KINDS = ["avoid", "want"] as const;
+export type PreferenceKind = (typeof PREFERENCE_KINDS)[number];
+
 export interface Preference {
   staffId: StaffId;
   date: LocalDate;
-  kind: "avoid" | "want";
+  kind: PreferenceKind;
   /** When set, the Preference applies only to Shifts of this Shift Type on that date. */
   shiftTypeId?: string;
 }

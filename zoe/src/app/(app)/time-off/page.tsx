@@ -29,7 +29,7 @@ export default async function TimeOffPage() {
   const shiftTypes = (await listShiftTypes(db, actor)).filter((t) => t.active);
   const typeName = new Map(shiftTypes.map((t) => [t.id, t.name]));
   const prefs = (await listPreferences(db, actor)).filter((p) => p.date >= today)
-    .map((p) => ({ id: p.id, date: p.date, kind: p.kind, shiftTypeName: p.shiftTypeId ? typeName.get(p.shiftTypeId) ?? "Retired Shift Type" : null }));
+    .map((p) => ({ id: p.id, date: p.date, kind: p.kind, shiftTypeName: p.shiftTypeId ? typeName.get(p.shiftTypeId) ?? "Inactive Shift Type" : null }));
 
   return (
     <>

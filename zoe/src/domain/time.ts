@@ -70,3 +70,18 @@ export function formatMinute(minute: number): string {
   const m = ((minute % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
+
+/**
+ * Converts wall-clock "HH:MM" start/end into Shift minutes (ADR-0004). An end at or before the
+ * start means the Shift ends the next day, so its endMinute exceeds 1440.
+ */
+export function wallClockRange(start: string, end: string): { startMinute: number; endMinute: number } {
+  const toMinute = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+  };
+  const startMinute = toMinute(start);
+  let endMinute = toMinute(end);
+  if (endMinute <= startMinute) endMinute += 1440;
+  return { startMinute, endMinute };
+}

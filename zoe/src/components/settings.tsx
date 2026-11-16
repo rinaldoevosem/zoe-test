@@ -14,14 +14,14 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DepartmentSettings } from "@/server/db/schema";
 import type { RejudgedViolation } from "@/server/services/settings";
-import { formatMinute } from "@/domain/time";
-import { shiftColor } from "@/lib/format";
+import { formatMinute, wallClockRange } from "@/domain/time";
+import { brokenAssignmentsPhrase, SHIFT_TYPE_COLORS, shiftColor } from "@/lib/format";
 
 /** After a configuration change, list the published Assignments it broke so the scheduler can fix them. */
 function warnRejudged(d: { newHardViolations: RejudgedViolation[] } | undefined) {
   const vs = d?.newHardViolations ?? [];
   if (!vs.length) return;
-  toast.warning(`${vs.length} published Assignment(s) now break a Hard Rule`, {
+  toast.warning(brokenAssignmentsPhrase(vs.length), {
     description: vs.slice(0, 6).map((v) => `• ${v.date} ${v.shiftLabel}: ${v.message}`).join("\n") + (vs.length > 6 ? `\n…and ${vs.length - 6} more in the Schedule builder` : ""),
     duration: 12000,
   });
@@ -133,7 +133,6 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
 }
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const COLORS = ["sky", "rose", "amber", "violet", "indigo", "emerald", "teal", "slate"] as const;
 
 export interface ShiftTypeRow {
   id?: string; name: string; code: string; color: string; startMinute: number; endMinute: number;
@@ -141,7 +140,6 @@ export interface ShiftTypeRow {
 }
 
 const toTime = (m: number) => formatMinute(m);
-const fromTime = (t: string) => { const [h, mi] = t.split(":").map(Number); return h * 60 + mi; };
 
 export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; readOnly: boolean }) {
   const { pending, run } = useAction();
@@ -153,10 +151,7 @@ export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; re
   const save = () => {
     if (!editing) return;
     const { start, end, tagText, ...rest } = editing;
-    const s = fromTime(start);
-    let e = fromTime(end);
-    if (e <= s) e += 1440; // ends the next morning
-    run(() => saveShiftTypeAction({ ...rest, startMinute: s, endMinute: e, requiredTags: tagText.split(",").map((x) => x.trim()).filter(Boolean) }), () => setEditing(null));
+    run(() => saveShiftTypeAction({ ...rest, ...wallClockRange(start, end), requiredTags: tagText.split(",").map((x) => x.trim()).filter(Boolean) }), (d) => { setEditing(null); warnRejudged(d); });
   };
   return (
     <>
@@ -187,7 +182,7 @@ export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; re
           <DialogHeader><DialogTitle>{editing?.id ? "Edit Shift Type" : "Add Shift Type"}</DialogTitle></DialogHeader>
           {editing && (
             <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
-              <p className="text-xs text-muted-foreground">Changes apply to Schedule Periods you create from now on. Existing Shifts keep their times.</p>
+              <p className="text-xs text-muted-foreground">Times, headcount and weekdays apply to Schedule Periods you create from now on. Name, colour, required Tags, Weight and On-Call also change existing Shifts, and Zoe re-checks published schedules when you save.</p>
               <div className="grid grid-cols-[1fr_7rem] gap-3">
                 <div className="grid gap-2"><Label htmlFor="stn">Name</Label><Input id="stn" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
                 <div className="grid gap-2"><Label htmlFor="stc">Code</Label><Input id="stc" required maxLength={6} value={editing.code} onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })} /></div>
@@ -216,7 +211,7 @@ export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; re
                 <div className="grid gap-2">
                   <Label htmlFor="stcol">Colour</Label>
                   <NativeSelect id="stcol" className="w-full" value={editing.color} onChange={(e) => setEditing({ ...editing, color: e.target.value })}>
-                    {COLORS.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
+                    {SHIFT_TYPE_COLORS.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
                   </NativeSelect>
                 </div>
                 <div className="flex flex-col justify-end gap-2 text-sm">

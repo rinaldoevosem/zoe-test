@@ -4,11 +4,12 @@ import { connection } from "next/server";
 import { signInAs } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { listSignInChoices } from "@/server/session";
+import Link from "next/link";
+import { listSignInOrganizations, listSignInUsers } from "@/server/session";
 
 export const metadata = { title: "Sign in" };
 
-export default function SignInPage() {
+export default function SignInPage({ searchParams }: PageProps<"/signin">) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-lg">
@@ -24,7 +25,7 @@ export default function SignInPage() {
         </CardHeader>
         <CardContent>
           <Suspense fallback={<p className="text-sm text-muted-foreground">Preparing demo data…</p>}>
-            <UserList />
+            <UserList searchParams={searchParams} />
           </Suspense>
         </CardContent>
       </Card>
@@ -32,30 +33,41 @@ export default function SignInPage() {
   );
 }
 
-async function UserList() {
+async function UserList({ searchParams }: { searchParams: PageProps<"/signin">["searchParams"] }) {
   await connection();
-  const groups = await listSignInChoices();
+  const orgs = await listSignInOrganizations();
+  const requested = (await searchParams).org;
+  const org = orgs.length === 1 ? orgs[0] : orgs.find((o) => o.id === requested);
+  if (!org) {
+    return (
+      <ul className="flex flex-col divide-y rounded-md border">
+        {orgs.map((o) => (
+          <li key={o.id}><Link href={`/signin?org=${o.id}`} className="block px-4 py-3 text-sm font-medium hover:bg-accent">{o.name}</Link></li>
+        ))}
+      </ul>
+    );
+  }
+  const users = await listSignInUsers(org.id);
   return (
-    <div className="flex max-h-[60dvh] flex-col gap-4 overflow-auto">
-      {groups.map((g) => (
-        <section key={g.organization} className="grid gap-2">
-          <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{g.organization}</h2>
-          <ul className="flex flex-col divide-y rounded-md border">
-            {g.users.map((u) => (
-              <li key={u.id}>
-                <form action={signInAs.bind(null, u.id)}>
-                  <button className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-accent" data-testid={`signin-${u.permission}`}>
-                    <span className="font-medium">{u.name}</span>
-                    <Badge variant={u.permission === "staff" ? "secondary" : "default"} className="capitalize">
-                      {u.permission === "admin" ? "admin + staff" : u.permission}
-                    </Badge>
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
+    <section className="grid max-h-[60dvh] gap-2 overflow-auto">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{org.name}</h2>
+        {orgs.length > 1 && <Link href="/signin" className="text-xs text-primary hover:underline">Change organization</Link>}
+      </div>
+      <ul className="flex flex-col divide-y rounded-md border">
+        {users.map((u) => (
+          <li key={u.id}>
+            <form action={signInAs.bind(null, u.id)}>
+              <button className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-accent" data-testid={`signin-${u.permission}`}>
+                <span className="font-medium">{u.name}</span>
+                <Badge variant={u.permission === "staff" ? "secondary" : "default"} className="capitalize">
+                  {u.permission === "admin" ? "admin + staff" : u.permission}
+                </Badge>
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

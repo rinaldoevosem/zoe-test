@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import type { Violation } from "@/domain/types";
+import { PREFERENCE_KINDS, type Violation } from "@/domain/types";
+import { brokenAssignmentsPhrase } from "@/lib/format";
 import { getDb } from "@/server/db";
 import { requireSession, signIn, signOut } from "@/server/session";
 import { DomainError } from "@/server/services/common";
@@ -137,7 +138,7 @@ export async function tradeAction(tradeId: string, event: "accept" | "decline" |
     r.status === "approved" ? "Approved — schedules updated" : r.status === "accepted" ? "Accepted — awaiting scheduler approval" : `Trade ${r.status}`);
 }
 
-const preferenceInput = z.object({ date, kind: z.enum(["avoid", "want"]), shiftTypeId: id.optional() });
+const preferenceInput = z.object({ date, kind: z.enum(PREFERENCE_KINDS), shiftTypeId: id.optional() });
 
 export async function addPreferenceAction(input: z.infer<typeof preferenceInput>) {
   return run((db, a) => timeoff.addPreference(db, a, preferenceInput.parse(input)), () => "Preference saved");
@@ -160,7 +161,7 @@ export async function markAllReadAction() {
 }
 
 const savedMessage = (what: string) => (r: { newHardViolations: unknown[] }) =>
-  r.newHardViolations.length ? `${what} saved — ${r.newHardViolations.length} published Assignment(s) now break a Hard Rule` : `${what} saved`;
+  r.newHardViolations.length ? `${what} saved — ${brokenAssignmentsPhrase(r.newHardViolations.length)}` : `${what} saved`;
 
 export async function saveSettingsAction(input: unknown) {
   return run((db, a) => settings.saveDepartmentSettings(db, a, input), savedMessage("Settings"));
@@ -171,5 +172,5 @@ export async function saveStaffAction(input: unknown) {
 }
 
 export async function saveShiftTypeAction(input: unknown) {
-  return run((db, a) => settings.saveShiftType(db, a, input), () => "Shift Type saved — it applies to Schedule Periods you create from now on");
+  return run((db, a) => settings.saveShiftType(db, a, input), savedMessage("Shift Type"));
 }

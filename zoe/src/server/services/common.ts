@@ -46,15 +46,15 @@ export async function notify(
   await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...n })));
 }
 
-/** Notifies every User in the Department who may approve trades and edit the schedule (schedulers and admins). */
-export async function notifyApprovers(
+/** Notifies every User in the Department who edits the schedule and approves trades (schedulers and admins). */
+export async function notifySchedulers(
   db: DB,
   actor: Pick<Actor, "organizationId" | "departmentId">,
   n: { category: "urgent" | "trade" | "schedule" | "request"; title: string; body: string; href?: string },
 ) {
   const approvers = (await db.select().from(schema.users)
     .where(and(eq(schema.users.organizationId, actor.organizationId), eq(schema.users.departmentId, actor.departmentId))))
-    .filter((u) => can(u, "trade:approve"));
+    .filter((u) => can(u, "schedule:edit"));
   if (!approvers.length) return;
   await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...n })));
 }

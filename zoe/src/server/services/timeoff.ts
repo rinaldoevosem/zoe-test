@@ -4,6 +4,7 @@ import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot } from "../repo";
 import { currentInstant } from "../clock";
 import { instantToLocalDate } from "@/domain/time";
+import type { PreferenceKind } from "@/domain/types";
 import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
 
 const { timeOffRequests, staffMembers } = schema;
@@ -99,7 +100,7 @@ export async function listPreferences(db: DB, actor: Actor) {
 
 export interface PreferenceInput {
   date: string;
-  kind: "avoid" | "want";
+  kind: PreferenceKind;
   /** Omit for the whole date. */
   shiftTypeId?: string;
 }
@@ -109,8 +110,10 @@ export async function addPreference(db: DB, actor: Actor, input: PreferenceInput
   const dept = await getDepartment(db, actor.departmentId);
   if (input.date < instantToLocalDate(now, dept.timeZone)) throw new DomainError("Preferences can't be set for dates in the past");
   if (input.shiftTypeId) {
-    const [type] = await db.select({ id: schema.shiftTypes.id }).from(schema.shiftTypes)
-      .where(and(eq(schema.shiftTypes.id, input.shiftTypeId), eq(schema.shiftTypes.departmentId, actor.departmentId)));
+    const [type] = await db.select({ id: schema.shiftTypes.id }).from(schema.shiftTypes).where(and(
+      eq(schema.shiftTypes.id, input.shiftTypeId), eq(schema.shiftTypes.organizationId, actor.organizationId),
+      eq(schema.shiftTypes.departmentId, actor.departmentId), eq(schema.shiftTypes.active, true),
+    ));
     if (!type) throw new DomainError("Shift Type not found");
   }
   const existing = await listPreferences(db, actor);

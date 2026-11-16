@@ -102,7 +102,7 @@ _Avoid_: Vacation request, PTO request
 The maximum number of Staff Members in a Department who may have approved time off on the same date.
 
 **Preference**:
-A Soft wish to work or not work a date or Shift Type. Breaking it costs Penalty.
+A Staff Member's wish about one date, optionally narrowed to one Shift Type: **avoid** (rather not work it; breaking it costs Penalty) or **want** (would like to work it; it only wins ties, never Load or Penalty).
 
 **Swap**:
 Two Staff Members exchanging their Assignments on two Shifts.

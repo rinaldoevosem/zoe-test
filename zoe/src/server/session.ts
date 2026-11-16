@@ -44,17 +44,18 @@ export async function requireSession(): Promise<Actor> {
   return s;
 }
 
-/** Demo sign-in choices (ADR-0008), grouped by Organization so tenants never see each other's people in one list. */
-export async function listSignInChoices() {
+/** Organizations offered by the demo sign-in picker (ADR-0008). */
+export async function listSignInOrganizations() {
   const db = await getDb();
-  const [orgs, users] = await Promise.all([db.select().from(schema.organizations), db.select().from(schema.users)]);
+  return (await db.select({ id: schema.organizations.id, name: schema.organizations.name }).from(schema.organizations))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The demo sign-in choices for ONE Organization, so one tenant's people are never listed beside another's. */
+export async function listSignInUsers(organizationId: string) {
+  const db = await getDb();
   const order = { scheduler: 0, admin: 1, staff: 2 } as const;
-  return orgs
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((o) => ({
-      organization: o.name,
-      users: users.filter((u) => u.organizationId === o.id)
-        .sort((a, b) => order[a.permission] - order[b.permission] || a.name.localeCompare(b.name))
-        .map((u) => ({ id: u.id, name: u.name, permission: u.permission })),
-    }));
+  return (await db.select({ id: schema.users.id, name: schema.users.name, permission: schema.users.permission }).from(schema.users)
+    .where(eq(schema.users.organizationId, organizationId)))
+    .sort((a, b) => order[a.permission] - order[b.permission] || a.name.localeCompare(b.name));
 }

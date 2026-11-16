@@ -2,7 +2,7 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { openTrade, previewTrade, transition, type Trade, type TradeEvent } from "@/domain/trades";
 import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot, type Snapshot } from "../repo";
-import { audit, DomainError, notify, notifyApprovers, require, staffNames, type Actor } from "./common";
+import { audit, DomainError, notify, notifySchedulers, require, staffNames, type Actor } from "./common";
 
 const { tradeRequests, assignments, shifts, schedulePeriods } = schema;
 type TradeRow = typeof tradeRequests.$inferSelect;
@@ -97,7 +97,7 @@ export async function actOnTrade(db: DB, actor: Actor, tradeId: string, event: "
 
 /** Under the manual trade policy, an accepted trade waits for a scheduler: tell them. */
 async function askApprovers(db: DB, actor: Actor, summary: string) {
-  await notifyApprovers(db, actor, { category: "trade", title: "Trade awaiting your approval", body: summary, href: "/trades" });
+  await notifySchedulers(db, actor, { category: "trade", title: "Trade awaiting your approval", body: summary, href: "/trades" });
 }
 
 export async function listTrades(db: DB, actor: Actor) {

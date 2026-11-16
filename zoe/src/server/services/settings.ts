@@ -6,7 +6,8 @@ import type { RuleKind } from "@/domain/types";
 import { currentInstant } from "../clock";
 import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot } from "../repo";
-import { audit, DomainError, notifyApprovers, require, type Actor } from "./common";
+import { brokenAssignmentsPhrase, SHIFT_TYPE_COLORS } from "@/lib/format";
+import { audit, DomainError, notifySchedulers, require, type Actor } from "./common";
 
 /** A Hard Violation a configuration change created in a published schedule. */
 export interface RejudgedViolation {
@@ -42,10 +43,10 @@ async function rejudge(db: DB, actor: Actor, now: number, change: () => Promise<
     .map((v) => ({ rule: v.rule, staffName: names.get(v.staffId) ?? "Unknown", shiftLabel: shifts.get(v.shiftId)!.label, date: shifts.get(v.shiftId)!.date, message: v.message }))
     .sort((a, b) => a.date.localeCompare(b.date) || a.staffName.localeCompare(b.staffName));
   if (found.length) {
-    await notifyApprovers(db, actor, {
+    await notifySchedulers(db, actor, {
       category: "urgent",
       title: "Published schedule needs attention",
-      body: `${found.length} Assignment(s) now break a Hard Rule, first on ${found[0].date} (${found[0].shiftLabel}).`,
+      body: `${brokenAssignmentsPhrase(found.length)}, first on ${found[0].date} (${found[0].shiftLabel}).`,
       href: "/schedule",
     });
   }
@@ -66,7 +67,7 @@ export async function saveDepartmentSettings(db: DB, actor: Actor, input: unknow
     await db.update(schema.departments).set({ settings })
       .where(and(eq(schema.departments.id, actor.departmentId), eq(schema.departments.organizationId, actor.organizationId)));
   });
-  await audit(db, actor, "settings.save", `Updated Department Rules and policies${newHardViolations.length ? `; ${newHardViolations.length} published Assignment(s) now break a Hard Rule` : ""}`, settings);
+  await audit(db, actor, "settings.save", `Updated Department Rules and policies${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, settings);
   return { newHardViolations };
 }
 
@@ -92,7 +93,7 @@ export async function saveStaffMember(db: DB, actor: Actor, input: unknown, now 
       await db.insert(schema.staffMembers).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags, phone: s.phone ?? null });
     }
   });
-  await audit(db, actor, "staff.save", `Saved Staff Member ${s.name}${newHardViolations.length ? `; ${newHardViolations.length} published Assignment(s) now break a Hard Rule` : ""}`, { tags, fte: s.fte });
+  await audit(db, actor, "staff.save", `Saved Staff Member ${s.name}${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, { tags, fte: s.fte });
   return { newHardViolations };
 }
 
@@ -108,8 +109,6 @@ export async function listAudit(db: DB, actor: Actor, limit = 200) {
   require(actor, "audit:view");
   return db.select().from(schema.auditEvents).where(and(eq(schema.auditEvents.departmentId, actor.departmentId), eq(schema.auditEvents.organizationId, actor.organizationId))).orderBy(desc(schema.auditEvents.createdAt)).limit(limit);
 }
-
-export const SHIFT_TYPE_COLORS = ["sky", "rose", "amber", "violet", "indigo", "emerald", "teal", "slate"] as const;
 
 const shiftTypeInput = z.object({
   id: z.string().optional(),
@@ -128,10 +127,12 @@ const shiftTypeInput = z.object({
   .refine((t) => t.endMinute - t.startMinute <= 1440, "Shifts can't be longer than 24 hours");
 
 /**
- * Creates or edits a Shift Type. Changes apply to Schedule Periods created afterwards;
- * existing Shifts keep the times they were generated with.
+ * Creates or edits a Shift Type. Times, headcount and weekdays apply to Schedule Periods created
+ * afterwards (existing Shifts keep what they were generated with). Name, colour, required Tags,
+ * Weight and On-Call are read live by every Shift of the type, so the edit is re-judged against
+ * published schedules (ADR-0002).
  */
-export async function saveShiftType(db: DB, actor: Actor, input: unknown): Promise<{ id: string }> {
+export async function saveShiftType(db: DB, actor: Actor, input: unknown, now = currentInstant()): Promise<{ id: string; newHardViolations: RejudgedViolation[] }> {
   require(actor, "config:edit");
   const parsed = shiftTypeInput.safeParse(input);
   if (!parsed.success) throw new DomainError(parsed.error.issues.map((i) => i.message).join("; "));
@@ -140,15 +141,18 @@ export async function saveShiftType(db: DB, actor: Actor, input: unknown): Promi
   const clash = (await listShiftTypes(db, actor)).find((x) => x.code === values.code && x.id !== id);
   if (clash) throw new DomainError(`Code ${values.code} is already used by ${clash.name}`);
   let savedId = id;
-  if (id) {
-    const [row] = await db.update(schema.shiftTypes).set(values)
-      .where(and(eq(schema.shiftTypes.id, id), eq(schema.shiftTypes.departmentId, actor.departmentId), eq(schema.shiftTypes.organizationId, actor.organizationId))).returning();
-    if (!row) throw new DomainError("Shift Type not found");
-  } else {
-    const order = (await listShiftTypes(db, actor)).length;
-    const [row] = await db.insert(schema.shiftTypes).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, sortOrder: order, ...values }).returning();
-    savedId = row.id;
-  }
-  await audit(db, actor, id ? "shiftType.update" : "shiftType.create", `${id ? "Updated" : "Created"} Shift Type ${values.name}${values.active ? "" : " (inactive)"}`, values);
-  return { id: savedId! };
+  const newHardViolations = await rejudge(db, actor, now, async () => {
+    if (id) {
+      const [row] = await db.update(schema.shiftTypes).set(values)
+        .where(and(eq(schema.shiftTypes.id, id), eq(schema.shiftTypes.departmentId, actor.departmentId), eq(schema.shiftTypes.organizationId, actor.organizationId))).returning();
+      if (!row) throw new DomainError("Shift Type not found");
+    } else {
+      const order = (await listShiftTypes(db, actor)).length;
+      const [row] = await db.insert(schema.shiftTypes).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, sortOrder: order, ...values }).returning();
+      savedId = row.id;
+    }
+  });
+  await audit(db, actor, id ? "shiftType.update" : "shiftType.create",
+    `${id ? "Updated" : "Created"} Shift Type ${values.name}${values.active ? "" : " (inactive)"}${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, values);
+  return { id: savedId!, newHardViolations };
 }
