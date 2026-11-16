@@ -31,6 +31,10 @@ A Staff Member's professional category (physician, CRNA, resident, nurse, APP). 
 A label on a Staff Member that a Shift Type can require — a skill, privilege or credential (e.g. `peds`, `cardiac`, `ACLS`).
 _Avoid_: Skill, qualification
 
+**Certification**:
+A Tag with an expiry date (e.g. `procedures` until 2027-03-31). After that date the Tag no longer qualifies the Staff Member for Shifts that require it.
+_Avoid_: Credential (implies full credentialing), license
+
 **FTE**:
 The fraction of a full workload a Staff Member is contracted for (0.0–1.0). Fairness is measured relative to it.
 
@@ -85,6 +89,19 @@ _Avoid_: Auto-schedule, optimizer, generate
 **Explanation**:
 The reason Auto-fill chose a Staff Member for a Shift, and why the runners-up lost.
 
+**Block**:
+A run of consecutive days one Staff Member works the same Shift Type, e.g. a hospitalist's 7 days on a Day Team.
+_Avoid_: Stretch, rotation (reserved for training)
+
+**Continuity**:
+A Rule setting that makes Auto-fill keep a Staff Member on the same Shift Type on consecutive days, so Blocks stay whole. It outranks Load when choosing who fills the next day of a Block.
+
+**Rest after Block**:
+A Rule: after working at least N consecutive days, a Staff Member must have M days off before the next Shift.
+
+**Auto-publish**:
+A Department setting: an Auto-fill run that leaves no Hard Violations publishes the Schedule Period immediately instead of waiting for a scheduler.
+
 **Weight**:
 How much one Shift of a Shift Type counts towards Load (e.g. a 24h call = 2.0, a half day = 0.5).
 
@@ -117,6 +134,20 @@ An eligible Staff Member claiming a Giveaway or a Coverage Gap.
 
 **Trade Request**:
 The umbrella record for a Swap or Giveaway as it moves `open` → `accepted` → `approved` | `rejected` | `withdrawn`. Rule-clean trades are approved automatically when the Department allows it.
+
+## Notifications
+
+**Notification**:
+A message to a User or Staff Member. Always shown in the in-app inbox; also sent by email, and by text message when Urgent.
+
+**Urgent**:
+A Notification that can't wait: an on-call Shift with nobody covering it in the next 24 hours. Urgent Notifications ignore Quiet Hours.
+
+**Quiet Hours**:
+A daily window in which a person receives no email or text messages except Urgent ones; held ones go out when the window ends.
+
+**Delivery**:
+One attempt to send a Notification on one channel (email or text message), recorded with its outcome.
 
 ## Records
 

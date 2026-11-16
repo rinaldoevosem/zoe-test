@@ -13,30 +13,30 @@ flowchart LR
     D1["Incumbent research"]:::done
     D2["v0 prototype spec<br/>built & tested"]:::done
     D3["ADRs 0001–0008<br/>provisional"]:::prov
+    T01["01 · Destination & pilot<br/><i>grilling</i>"]:::done
     T05["05 · Compliance: HIPAA / SOC 2<br/><i>research</i>"]:::done
     T06["06 · Hospital SSO & IdPs<br/><i>research</i>"]:::done
     T07["07 · Epic / paging paths<br/><i>research</i>"]:::done
     T08["08 · Payroll formats<br/><i>research</i>"]:::done
     T09["09 · Solver options<br/><i>research</i>"]:::done
+    T15["15 · Notification channels<br/><i>grilling</i>"]:::done
+    T16["16 · Mobile: PWA vs native<br/><i>prototype</i>"]:::done
+    T17["17 · Integration scope<br/><i>grilling</i>"]:::done
+    T18["18 · Nursing scope<br/><i>grilling</i>"]:::done
+    T19["19 · Credentialing scope<br/><i>grilling</i>"]:::done
+    T20["20 · Migration & onboarding<br/><i>grilling</i>"]:::done
   end
   subgraph FRONTIER["Frontier: takeable now"]
-    T01["01 · Destination & pilot<br/><i>grilling</i>"]:::grilling
     T02["02 · Confirm provisional ADRs<br/><i>grilling</i>"]:::grilling
     T03["03 · Where Evenly lives<br/><i>grilling</i>"]:::grilling
     T04["04 · Business model & licensing<br/><i>grilling</i>"]:::grilling
+    T10["10 · Real schedule sample<br/><i>task</i>"]:::task
   end
   subgraph FOG["Blocked"]
-    T10["10 · Real schedule sample<br/><i>task</i>"]:::task
     T11["11 · Rule catalogue<br/><i>grilling</i>"]:::grilling
     T12["12 · Rule authoring UX<br/><i>prototype</i>"]:::prototype
     T13["13 · Auto-fill strategy<br/><i>grilling</i>"]:::grilling
     T14["14 · Auth, tenancy, residency<br/><i>grilling</i>"]:::grilling
-    T15["15 · Notification channels<br/><i>grilling</i>"]:::grilling
-    T16["16 · Mobile: PWA vs native<br/><i>prototype</i>"]:::prototype
-    T17["17 · Integration scope<br/><i>grilling</i>"]:::grilling
-    T18["18 · Nursing scope<br/><i>grilling</i>"]:::grilling
-    T19["19 · Credentialing scope<br/><i>grilling</i>"]:::grilling
-    T20["20 · Migration & onboarding<br/><i>grilling</i>"]:::grilling
     T22["22 · Auto-fill benchmark<br/><i>task</i>"]:::task
   end
   T21["21 · Lock the v1 spec<br/><i>grilling</i>"]:::grilling

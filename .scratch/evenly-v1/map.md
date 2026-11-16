@@ -17,6 +17,7 @@ A **locked v1 spec** — every decision needed to take Evenly live in **one pilo
 
 ## Decisions so far
 
+- [Stakeholder questionnaire, owner's answers](issues/01-destination-and-pilot.md): pilot is **hospital medicine**, one Department, go-live in **three months**; providers only; certifications with expiry dates; Evenly drafts and a person approves (Auto-publish optional); auto-approved trades; in-app + email, SMS only when urgent, quiet hours; PWA for beta, store apps before GA; calendars + on-call list on day one; white-glove import with a one-month parallel run; hospital sign-in; US cloud. Build work: [`.scratch/evenly-beta/`](../evenly-beta/spec.md).
 - Working name: **Evenly** (renamed from Zoe on 2026-11-16; trademark and domain checks still to do).
 - [Incumbent landscape research](../../docs/research/0001-qgenda-landscape.md): QGenda's capabilities inventoried; top user pains are mobile logouts, auto-scheduler conflict churn, slow trade approval, stale calendar sync, admin complexity, weak fairness reporting.
 - [v0 prototype spec](../evenly-platform/spec.md): 40-story v0 built and tested (scheduling, Auto-fill, trades, time off, on-call, ICS, reports, audit) — proves the single-Rule-engine approach.
@@ -39,5 +40,6 @@ A **locked v1 spec** — every decision needed to take Evenly live in **one pilo
 
 ## Out of scope
 
-- Residency program management (evaluations, accreditation, GME reimbursement): a separate product category. *(Proposed — confirm in "Destination & pilot department".)*
+- Residency program management (evaluations, accreditation, GME reimbursement): a separate product category. *(Confirmed 2026-11-16.)*
+- Nursing units, payroll export and Epic On-Call Finder for v1 (questionnaire, 2026-11-16).
 - The repository's original, unrelated code (borrowed instance).
