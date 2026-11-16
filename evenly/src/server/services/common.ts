@@ -43,28 +43,32 @@ export interface NotificationInput {
   href?: string;
   /** Jobs pass a key so the same reminder or alert is never sent twice. */
   dedupeKey?: string;
+  /** Urgent (GLOSSARY): an on-call Shift short of cover within 24 hours. Adds text messages and ignores Quiet Hours. */
+  urgent?: boolean;
 }
 
-async function alreadySent(db: DB, organizationId: string, dedupeKey?: string) {
-  if (!dedupeKey) return false;
-  const [hit] = await db.select({ id: schema.notifications.id }).from(schema.notifications)
-    .where(and(eq(schema.notifications.organizationId, organizationId), eq(schema.notifications.dedupeKey, dedupeKey))).limit(1);
-  return !!hit;
+/** Claims a dedupe key; false when it was already claimed (sent before, or by a concurrent run). */
+async function claimKey(db: DB, organizationId: string, key?: string) {
+  if (!key) return true;
+  const claimed = await db.insert(schema.notificationKeys).values({ organizationId, key }).onConflictDoNothing().returning();
+  return claimed.length > 0;
 }
 
-/** In-app Notifications are written here; email and text Deliveries are queued and the due ones sent. */
-async function deliver(db: DB, rows: (typeof schema.notifications.$inferSelect)[]) {
+/** In-app Notifications are written here; email and text Deliveries are queued and this Organization's due ones sent. */
+async function deliver(db: DB, organizationId: string, rows: (typeof schema.notifications.$inferSelect)[], urgent: boolean) {
+  // Loaded lazily: delivery.ts imports this module's types, and most callers never send email.
   const { queueDeliveries, dispatchDue } = await import("./delivery");
   const now = currentInstant();
-  await queueDeliveries(db, rows, now);
-  await dispatchDue(db, now);
+  await queueDeliveries(db, organizationId, rows, urgent, now);
+  await dispatchDue(db, now, undefined, organizationId);
 }
 
 export async function notify(db: DB, organizationId: string, staffMemberIds: string[], n: NotificationInput) {
   const unique = [...new Set(staffMemberIds)];
-  if (!unique.length || (await alreadySent(db, organizationId, n.dedupeKey))) return 0;
-  const rows = await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...n }))).returning();
-  await deliver(db, rows);
+  if (!unique.length || !(await claimKey(db, organizationId, n.dedupeKey))) return 0;
+  const { urgent = false, ...row } = n;
+  const rows = await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...row }))).returning();
+  await deliver(db, organizationId, rows, urgent);
   return rows.length;
 }
 
@@ -77,9 +81,10 @@ export async function notifySchedulers(
   const approvers = (await db.select().from(schema.users)
     .where(and(eq(schema.users.organizationId, actor.organizationId), eq(schema.users.departmentId, actor.departmentId))))
     .filter((u) => can(u, "schedule:edit"));
-  if (!approvers.length || (await alreadySent(db, actor.organizationId, n.dedupeKey))) return 0;
-  const rows = await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...n }))).returning();
-  await deliver(db, rows);
+  if (!approvers.length || !(await claimKey(db, actor.organizationId, n.dedupeKey))) return 0;
+  const { urgent = false, ...row } = n;
+  const rows = await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...row }))).returning();
+  await deliver(db, actor.organizationId, rows, urgent);
   return rows.length;
 }
 

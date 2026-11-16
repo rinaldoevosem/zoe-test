@@ -1,4 +1,4 @@
-import { boolean, date, index, integer, jsonb, pgTable, real, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, date, index, integer, jsonb, pgTable, primaryKey, real, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { RuleConfig } from "@/domain/types";
 
 /** Every table carries organization_id (ADR-0003). */
@@ -186,6 +186,13 @@ export const notifications = pgTable("notifications", {
   index("notifications_dedupe").on(t.organizationId, t.dedupeKey),
 ]);
 
+/** Keys of reminders and alerts already sent: the primary key makes "send once" safe under concurrent runs. */
+export const notificationKeys = pgTable("notification_keys", {
+  organizationId: org(),
+  key: text("key").notNull(),
+  createdAt: createdAt(),
+}, (t) => [primaryKey({ columns: [t.organizationId, t.key] })]);
+
 /** One attempt to send a Notification by email or text message, with its outcome (GLOSSARY: Delivery). */
 export const deliveries = pgTable("deliveries", {
   id: id(),
@@ -195,7 +202,8 @@ export const deliveries = pgTable("deliveries", {
   to: text("to").notNull(),
   subject: text("subject").notNull(),
   body: text("body").notNull(),
-  status: text("status", { enum: ["pending", "sent", "skipped", "failed"] }).notNull().default("pending"),
+  /** `sending` marks a Delivery claimed by one dispatcher, so two runs never send it twice. */
+  status: text("status", { enum: ["pending", "sending", "sent", "skipped", "failed"] }).notNull().default("pending"),
   sendAfter: timestamp("send_after", { withTimezone: true }).notNull(),
   detail: text("detail"),
   sentAt: timestamp("sent_at", { withTimezone: true }),

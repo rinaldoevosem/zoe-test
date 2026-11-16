@@ -15,3 +15,7 @@ Add Rest after Block and Continuity to the Rule configuration with off-by-defaul
 - [x] With Continuity on, Auto-fill over a fortnight gives each Day Team seat whole Blocks bounded by max consecutive days
 - [x] Old Departments without the new fields behave exactly as before (existing tests unchanged)
 - [x] Rules form saves both settings and re-judges published Shifts
+
+## Comments
+- Review follow-ups: snapshots now look back a whole Block plus its days off, so Rest after Block sees Blocks that ended more than a week ago. Continuity no longer outranks Soft Block limits.
+- Known limit: Rest after Block counts days by Shift start date, so the morning after a night Shift counts as a day off.

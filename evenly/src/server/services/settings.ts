@@ -1,9 +1,9 @@
 import { parseStaffCsv } from "@/domain/staff-import";
 import { DEFAULT_RULES } from "@/domain/types";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { evaluate, newViolations } from "@/domain/rules";
-import { addDays, instantToLocalDate } from "@/domain/time";
+import { addDays, instantToLocalDate, isLocalDate } from "@/domain/time";
 import type { RuleKind } from "@/domain/types";
 import { currentInstant } from "../clock";
 import { schema, type DB } from "../db";
@@ -85,7 +85,7 @@ const staffInput = z.object({
   clinicalRole: z.string().min(1).max(40),
   fte: z.number().gt(0, "FTE must be above 0").max(1),
   tags: z.array(z.string().min(1).max(30)).max(20),
-  tagExpiry: z.record(z.string(), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2027-03-31")).default({}),
+  tagExpiry: z.record(z.string(), z.string().refine(isLocalDate, "Use a real date like 2027-03-31")).default({}),
   phone: z.string().max(40).optional(),
 });
 
@@ -120,16 +120,29 @@ export async function importStaff(db: DB, actor: Actor, csv: unknown, now = curr
   const newHardViolations = await rejudge(db, actor, now, async () => {
     const existing = await db.select().from(schema.staffMembers)
       .where(and(eq(schema.staffMembers.departmentId, actor.departmentId), eq(schema.staffMembers.organizationId, actor.organizationId)));
-    const takenEmails = new Set((await db.select({ email: schema.users.email }).from(schema.users)).map((u) => u.email.toLowerCase()));
+    // Sign-in emails are unique across Evenly; look up only the emails in this sheet.
+    const emails = rows.map((r) => r.email);
+    const takenEmails = new Set(emails.length
+      ? (await db.select({ email: schema.users.email }).from(schema.users).where(inArray(schema.users.email, emails))).map((u) => u.email.toLowerCase())
+      : []);
     for (const r of rows) {
       const match = existing.find((m) => m.email?.toLowerCase() === r.email);
-      const values = { name: r.name, clinicalRole: r.clinicalRole, fte: r.fte, tags: r.tags, tagExpiry: r.tagExpiry };
+      // Only the columns the sheet has are written; an update keeps everything else.
+      const given = {
+        name: r.name,
+        ...(r.clinicalRole !== undefined ? { clinicalRole: r.clinicalRole } : {}),
+        ...(r.fte !== undefined ? { fte: r.fte } : {}),
+        ...(r.tags !== undefined ? { tags: r.tags, tagExpiry: r.tagExpiry ?? {} } : {}),
+      };
       if (match) {
-        await db.update(schema.staffMembers).set(values).where(eq(schema.staffMembers.id, match.id));
+        await db.update(schema.staffMembers).set(given)
+          .where(and(eq(schema.staffMembers.id, match.id), eq(schema.staffMembers.organizationId, actor.organizationId), eq(schema.staffMembers.departmentId, actor.departmentId)));
         updated++;
         continue;
       }
-      const [m] = await db.insert(schema.staffMembers).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, email: r.email, ...values }).returning();
+      const [m] = await db.insert(schema.staffMembers).values({
+        organizationId: actor.organizationId, departmentId: actor.departmentId, email: r.email, clinicalRole: "physician", fte: 1, tags: [], tagExpiry: {}, ...given,
+      }).returning();
       if (!takenEmails.has(r.email)) {
         await db.insert(schema.users).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, name: r.name, email: r.email, permission: "staff", staffMemberId: m.id });
         takenEmails.add(r.email);

@@ -138,16 +138,16 @@ The umbrella record for a Swap or Giveaway as it moves `open` → `accepted` →
 ## Notifications
 
 **Notification**:
-A message to a User or Staff Member. Always shown in the in-app inbox; also sent by email, and by text message when Urgent.
+A message to a User or Staff Member (categories: urgent, trade, schedule, request, reminder). Always shown in the in-app inbox; also sent by email, and by text message when Urgent.
 
 **Urgent**:
-A Notification that can't wait: an on-call Shift with nobody covering it in the next 24 hours. Urgent Notifications ignore Quiet Hours.
+A Notification that can't wait: an on-call Shift starting in the next 24 hours with fewer people than it needs. Urgent Notifications add a text message and ignore Quiet Hours. (Other "urgent"-category inbox items, such as re-judge warnings, are not Urgent.)
 
 **Quiet Hours**:
-A daily window in which a person receives no email or text messages except Urgent ones; held ones go out when the window ends.
+A daily window in which a person receives no email or text messages except Urgent ones; held ones go out with the first send after the window ends.
 
 **Delivery**:
-One attempt to send a Notification on one channel (email or text message), recorded with its outcome.
+One attempt to send a Notification on one channel (email or text message; `sms` in code), recorded with its outcome: sent, skipped (no provider), or failed.
 
 ## Records
 

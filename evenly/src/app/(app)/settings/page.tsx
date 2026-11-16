@@ -11,6 +11,7 @@ import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { hasCalendarToken } from "@/server/services/calendar";
+import { REMINDER_DAYS } from "@/server/services/daily";
 import { recentDeliveries } from "@/server/services/delivery";
 import { getChannelSettings } from "@/server/services/notifications";
 import { NotificationSettings } from "@/components/notification-settings";
@@ -29,7 +30,7 @@ export default async function SettingsPage() {
   ]);
   const today = instantToLocalDate(currentInstant(), dept.timeZone);
   const names = new Map(staff.map((s) => [s.id, s.name]));
-  const expiring = expiringCertifications(staff.map((s) => ({ ...s, tagExpiry: s.tagExpiry })), today, 60);
+  const expiring = expiringCertifications(staff, today, REMINDER_DAYS * 2);
 
   return (
     <>
@@ -62,7 +63,7 @@ export default async function SettingsPage() {
           <Card data-testid="expiring-certifications">
             <CardHeader>
               <CardTitle>Certifications expiring soon</CardTitle>
-              <CardDescription>Expired Certifications no longer qualify anyone for Shifts that require them. Reminders go out 30 days ahead.</CardDescription>
+              <CardDescription>Expired Certifications no longer qualify anyone for Shifts that require them. Reminders go out {REMINDER_DAYS} days ahead.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="grid gap-2">

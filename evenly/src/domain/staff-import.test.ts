@@ -11,7 +11,7 @@ describe("parseStaffCsv", () => {
     expect(parseStaffCsv(csv)).toEqual({
       rows: [
         { line: 2, name: "Dr. Ada Park", email: "ada.park@riverside.example", clinicalRole: "physician", fte: 0.8, tags: ["md", "procedures"], tagExpiry: { procedures: "2027-03-31" } },
-        { line: 3, name: "Sam Lee NP", email: "sam.lee@riverside.example", clinicalRole: "NP", fte: 1, tags: ["app"], tagExpiry: {} },
+        { line: 3, name: "Sam Lee NP", email: "sam.lee@riverside.example", clinicalRole: "NP", tags: ["app"], tagExpiry: {} },
       ],
       errors: [],
     });
@@ -31,6 +31,11 @@ describe("parseStaffCsv", () => {
 
   test("requires the name and email columns and rejects bad expiry dates", () => {
     expect(parseStaffCsv("full name,mail\nA,a@x.example").errors).toEqual([{ line: 1, message: "The first row needs Name and Email columns" }]);
-    expect(parseStaffCsv("name,email,tags\nA,a@x.example,procedures:31/03/2027").errors).toEqual([{ line: 2, message: "Tag expiry \"31/03/2027\" must be a date like 2027-03-31" }]);
+    expect(parseStaffCsv("name,email,tags\nA,a@x.example,procedures:31/03/2027").errors).toEqual([{ line: 2, message: "Tag expiry \"31/03/2027\" must be a real date like 2027-03-31" }]);
+    expect(parseStaffCsv("name,email,tags\nA,a@x.example,procedures:2027-02-30").errors).toEqual([{ line: 2, message: "Tag expiry \"2027-02-30\" must be a real date like 2027-03-31" }]);
   });
+});
+
+test("columns the sheet doesn't have stay undefined, so an update keeps existing values", () => {
+  expect(parseStaffCsv("Name,Email\nAda,ada@x.example").rows).toEqual([{ line: 2, name: "Ada", email: "ada@x.example" }]);
 });

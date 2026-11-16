@@ -2,6 +2,7 @@
  * Auto-fill (ADR-0002): fill Coverage Gaps only, never break a Hard Rule, never move a Locked
  * Assignment, equalise Load by FTE, minimise Penalty, and explain every pick. Deterministic.
  */
+import { holdsTag } from "./certifications";
 import { loadOf } from "./load";
 import { checkAssignment, hasHard, matchesPreference, totalPenalty } from "./rules";
 import { addDays, isWeekend } from "./time";
@@ -60,7 +61,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
   // Most-constrained first: fewest Staff Members who could ever hold the Shift, then on-call, then weekends,
   // then chronological. With Continuity on, weekends don't jump the queue, so Blocks grow forwards in date order.
   const continuity = !!ctx.rules.continuity?.enabled;
-  const scarcity = (s: Shift) => staff.filter((m) => s.requiredTags.every((t) => m.tags.includes(t))).length;
+  const scarcity = (s: Shift) => staff.filter((m) => s.requiredTags.every((t) => holdsTag(m, t, s.date))).length;
   const gaps = ctx.shifts
     .filter((s) => ctx.assignments.filter((a) => a.shiftId === s.id).length < s.headcount)
     .sort((a, b) =>
@@ -95,7 +96,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
           continue;
         }
         const wants = ctx.rules.preferences.enabled && ctx.preferences.some((p) => p.kind === "want" && matchesPreference(p, m.id, s));
-        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs), wants, continues: continuity && holdsAdjacent(m, s) });
+        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs), wants, continues: continuity && holdsAdjacent(m, s) && !vs.some((v) => BLOCK_LIMITS.has(v.rule)) });
       }
       if (!eligible.length) {
         unfilled.push({
@@ -131,6 +132,8 @@ export function autofill(input: ScheduleContext): AutofillResult {
   return { added: sortAssignments(added, shiftsById), explanations, unfilled };
 }
 
+/** Continuing a Block never beats the Block's own limits, even when they are Soft. */
+const BLOCK_LIMITS = new Set<RuleKind>(["maxConsecutiveDays", "restAfterBlock"]);
 const RULE_ORDER: RuleKind[] = ["requiredTags", "timeOff", "overlap", "minRest", "maxConsecutiveDays", "restAfterBlock", "maxShiftsPerWeek", "headcount", "preference"];
 const order = (r: RuleKind) => RULE_ORDER.indexOf(r);
 const round = (n: number) => Math.round(n * 100) / 100;

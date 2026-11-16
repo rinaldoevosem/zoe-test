@@ -3,7 +3,7 @@
  * notification policy and sent through pluggable providers. Without a configured provider a Delivery is
  * recorded as skipped with the reason; nothing is ever reported as sent that wasn't.
  */
-import { and, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 import { planDeliveries } from "@/domain/notification-policy";
 import { schema, type DB } from "../db";
 
@@ -48,12 +48,11 @@ export const configuredSenders = (): Senders => ({ email: resend(), sms: twilio(
 type NotificationRow = typeof schema.notifications.$inferSelect;
 
 /** Plan email and text Deliveries for freshly created Notifications, per recipient's settings and Quiet Hours. */
-export async function queueDeliveries(db: DB, rows: NotificationRow[], now: number) {
+export async function queueDeliveries(db: DB, organizationId: string, rows: NotificationRow[], urgent: boolean, now: number) {
   if (!rows.length) return;
-  const users = await db.select().from(schema.users).where(eq(schema.users.organizationId, rows[0].organizationId));
-  const staff = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.organizationId, rows[0].organizationId));
-  const deptIds = [...new Set([...users.map((u) => u.departmentId), ...staff.map((s) => s.departmentId)])];
-  const depts = deptIds.length ? await db.select().from(schema.departments).where(inArray(schema.departments.id, deptIds)) : [];
+  const users = await db.select().from(schema.users).where(eq(schema.users.organizationId, organizationId));
+  const staff = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.organizationId, organizationId));
+  const depts = await db.select().from(schema.departments).where(eq(schema.departments.organizationId, organizationId));
   const tz = new Map(depts.map((d) => [d.id, d.timeZone]));
   const values: (typeof schema.deliveries.$inferInsert)[] = [];
   for (const n of rows) {
@@ -62,7 +61,7 @@ export async function queueDeliveries(db: DB, rows: NotificationRow[], now: numb
     const memberId = n.staffMemberId ?? user?.staffMemberId;
     const member = memberId ? staff.find((s) => s.id === memberId) : undefined;
     const timeZone = tz.get(user?.departmentId ?? member?.departmentId ?? "") ?? "UTC";
-    const planned = planDeliveries(n.category === "urgent" ? "urgent" : "normal", {
+    const planned = planDeliveries(urgent ? "urgent" : "normal", {
       email: user?.email ?? member?.email ?? null,
       phone: user?.mobile ?? member?.phone ?? null,
       emailOn: user?.notifyEmail ?? true,
@@ -71,16 +70,24 @@ export async function queueDeliveries(db: DB, rows: NotificationRow[], now: numb
       quietEnd: user?.quietEnd ?? null,
     }, now, timeZone);
     for (const p of planned) {
-      values.push({ organizationId: n.organizationId, notificationId: n.id, channel: p.channel, to: p.to, subject: n.title, body: n.body, sendAfter: new Date(p.sendAt) });
+      values.push({ organizationId, notificationId: n.id, channel: p.channel, to: p.to, subject: n.title, body: n.body, sendAfter: new Date(p.sendAt) });
     }
   }
   if (values.length) await db.insert(schema.deliveries).values(values);
 }
 
-/** Send every pending Delivery that is due. Returns counts by outcome. */
-export async function dispatchDue(db: DB, now: number, senders: Senders = configuredSenders()) {
-  const due = await db.select().from(schema.deliveries)
-    .where(and(eq(schema.deliveries.status, "pending"), lte(schema.deliveries.sendAfter, new Date(now))));
+/**
+ * Send every pending Delivery that is due, for one Organization or (the daily job) all. Each Delivery is claimed
+ * atomically (pending → sending) before it is sent, so concurrent dispatchers never send it twice.
+ */
+export async function dispatchDue(db: DB, now: number, senders: Senders = configuredSenders(), organizationId?: string) {
+  const due = await db.update(schema.deliveries).set({ status: "sending" })
+    .where(and(
+      eq(schema.deliveries.status, "pending"),
+      lte(schema.deliveries.sendAfter, new Date(now)),
+      ...(organizationId ? [eq(schema.deliveries.organizationId, organizationId)] : []),
+    ))
+    .returning();
   const counts = { sent: 0, skipped: 0, failed: 0 };
   for (const d of due) {
     const sender = senders[d.channel];

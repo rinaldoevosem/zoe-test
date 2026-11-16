@@ -16,7 +16,7 @@ export interface OnCallEntry {
 
 /** Who's On Call in a Department at `at` (published schedules only), through the next `hours` (default 24, at most a week). */
 export async function whosOnCall(db: DB, departmentId: string, at: number, hours = 24): Promise<{ department: string; timeZone: string; entries: OnCallEntry[] }> {
-  hours = Math.min(168, Math.max(1, Math.round(hours)));
+  hours = clampHours(hours);
   const [dept] = await db.select().from(schema.departments).where(eq(schema.departments.id, departmentId));
   if (!dept) throw new Error("Department not found");
   const day = instantToLocalDate(at, dept.timeZone);
@@ -42,6 +42,11 @@ export async function whosOnCall(db: DB, departmentId: string, at: number, hours
     }));
   return { department: dept.name, timeZone: dept.timeZone, entries };
 }
+
+/** The on-call window: whole hours from 1 to a week. */
+export const clampHours = (hours: number) => Math.min(168, Math.max(1, Math.round(hours) || 24));
+
+export const ONCALL_COLUMNS = ["shift_id", "shift_type", "code", "start", "end", "staff_id", "name", "clinical_role", "phone"] as const;
 
 /** One row per person per on-call Shift, with stable IDs, for the hospital operator and paging systems. */
 export function onCallRows(entries: OnCallEntry[]) {

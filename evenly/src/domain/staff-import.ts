@@ -2,17 +2,21 @@
  * Staff import (beta ticket 09): parse a spreadsheet exported as CSV into Staff Members. Pure; the service
  * upserts the rows by email. Columns (any order, case-insensitive): Name, Email, Clinical Role, FTE, Tags.
  * Tags are separated by ";" and a Certification carries its expiry as `tag:YYYY-MM-DD`.
+ * A column that is absent (or a blank Role/FTE cell) leaves that field undefined, so an update keeps what
+ * Evenly already has; the service fills defaults only for new people.
  */
+import { isLocalDate } from "./time";
 import type { LocalDate } from "./types";
 
 export interface ImportedStaff {
   line: number;
   name: string;
   email: string;
-  clinicalRole: string;
-  fte: number;
-  tags: string[];
-  tagExpiry: Record<string, LocalDate>;
+  clinicalRole?: string;
+  fte?: number;
+  /** Undefined when the sheet has no Tags column; `tagExpiry` comes with it. */
+  tags?: string[];
+  tagExpiry?: Record<string, LocalDate>;
 }
 
 export interface ImportError { line: number; message: string }
@@ -22,7 +26,7 @@ export function parseStaffCsv(text: string): { rows: ImportedStaff[]; errors: Im
   if (!records.length) return { rows: [], errors: [{ line: 1, message: "The file is empty" }] };
   const header = records[0].cells.map((h) => h.trim().toLowerCase().replace(/[\s_-]+/g, " "));
   const col = (...names: string[]) => header.findIndex((h) => names.includes(h));
-  const at = { name: col("name"), email: col("email", "email address"), role: col("clinical role", "role"), fte: col("fte"), tags: col("tags", "skills") };
+  const at = { name: col("name"), email: col("email", "email address"), role: col("clinical role", "role"), fte: col("fte"), tags: col("tags") };
   if (at.name < 0 || at.email < 0) return { rows: [], errors: [{ line: records[0].line, message: "The first row needs Name and Email columns" }] };
 
   const rows: ImportedStaff[] = [];
@@ -33,11 +37,11 @@ export function parseStaffCsv(text: string): { rows: ImportedStaff[]; errors: Im
     const name = get(at.name);
     const email = get(at.email).toLowerCase();
     const fteText = get(at.fte);
-    const fte = fteText === "" ? 1 : Number(fteText);
+    const fte = fteText === "" ? undefined : Number(fteText);
     const fail = (message: string) => errors.push({ line, message });
     if (!name) { fail("Name is missing"); continue; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { fail(`Email "${get(at.email)}" doesn't look like an email address`); continue; }
-    if (!(fte > 0 && fte <= 1)) { fail("FTE must be above 0 and at most 1"); continue; }
+    if (fte !== undefined && !(fte > 0 && fte <= 1)) { fail("FTE must be above 0 and at most 1"); continue; }
     if (seen.has(email)) { fail(`${email} appears more than once`); continue; }
     const tags: string[] = [];
     const tagExpiry: Record<string, LocalDate> = {};
@@ -45,13 +49,18 @@ export function parseStaffCsv(text: string): { rows: ImportedStaff[]; errors: Im
     for (const raw of get(at.tags).split(";").map((t) => t.trim()).filter(Boolean)) {
       const [tagPart, date] = raw.split(":").map((x) => x.trim());
       const tag = tagPart.toLowerCase();
-      if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date)) { bad = `Tag expiry "${date}" must be a date like 2027-03-31`; break; }
+      if (date !== undefined && !isLocalDate(date)) { bad = `Tag expiry "${date}" must be a real date like 2027-03-31`; break; }
       if (!tags.includes(tag)) tags.push(tag);
       if (date) tagExpiry[tag] = date;
     }
     if (bad) { fail(bad); continue; }
     seen.add(email);
-    rows.push({ line, name, email, clinicalRole: get(at.role) || "physician", fte, tags, tagExpiry });
+    rows.push({
+      line, name, email,
+      ...(get(at.role) ? { clinicalRole: get(at.role) } : {}),
+      ...(fte !== undefined ? { fte } : {}),
+      ...(at.tags >= 0 ? { tags, tagExpiry } : {}),
+    });
   }
   return { rows, errors };
 }

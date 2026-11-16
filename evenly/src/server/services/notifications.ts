@@ -39,7 +39,9 @@ export interface ChannelSettingsView {
 
 export async function getChannelSettings(db: DB, actor: Actor): Promise<ChannelSettingsView> {
   const [u] = await db.select().from(schema.users).where(and(eq(schema.users.id, actor.userId), eq(schema.users.organizationId, actor.organizationId)));
-  const [m] = actor.staffMemberId ? await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.id, actor.staffMemberId)) : [];
+  const [m] = actor.staffMemberId
+    ? await db.select().from(schema.staffMembers).where(and(eq(schema.staffMembers.id, actor.staffMemberId), eq(schema.staffMembers.organizationId, actor.organizationId)))
+    : [];
   return { email: u.email, notifyEmail: u.notifyEmail, notifySms: u.notifySms, mobile: u.mobile ?? m?.phone ?? "", quietStart: u.quietStart, quietEnd: u.quietEnd };
 }
 

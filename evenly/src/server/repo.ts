@@ -37,10 +37,12 @@ export async function loadSnapshot(
   end: string,
   opts: { publishedOnly?: boolean; pad?: number } = {},
 ): Promise<Snapshot> {
-  const pad = opts.pad ?? 7;
+  const department = await getDepartment(db, departmentId);
+  // Look back far enough for the Rules that span days: a week, or a whole Block plus its days off.
+  const block = department.settings.rules.restAfterBlock;
+  const pad = opts.pad ?? Math.max(7, block.enabled ? block.minBlockDays + block.daysOff + 1 : 0);
   const from = addDays(start, -pad);
   const to = addDays(end, pad);
-  const department = await getDepartment(db, departmentId);
 
   const rows = await db
     .select({ shift: shifts, type: shiftTypes, period: schedulePeriods })

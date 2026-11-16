@@ -123,27 +123,34 @@ describe("Certifications", () => {
 });
 
 describe("Assign a Block", () => {
-  const firstDecDayTeam = async () => {
-    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-01", { pad: 0 });
-    return snap.shifts.find((s) => s.label === "Day Team" && s.date === "2026-12-01")!;
-  };
+  let rested: { id: string; name: string } | undefined;
 
   test("assigns one person to the same Shift Type for consecutive days", async () => {
-    const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
-    const r = await assignBlock(db, scheduler, (await firstDecDayTeam()).id, leo.id, 7);
-    expect(r.added).toBe(7);
-    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-07", { pad: 0 });
-    const days = snap.shifts.filter((s) => s.label === "Day Team" && snap.ctx.assignments.some((a) => a.shiftId === s.id && a.staffId === leo.id)).map((s) => s.date);
+    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-01", { pad: 0 });
+    const dec1 = snap.shifts.find((s) => s.label === "Day Team" && s.date === "2026-12-01")!;
+    // Someone whose last Block ended long enough ago (Rest after Block is Hard in the demo).
+    for (const m of await db.select().from(schema.staffMembers)) {
+      if (!m.tags.includes("md")) continue;
+      const ok = await assignBlock(db, scheduler, dec1.id, m.id, 7).then((r) => r.added === 7, () => false);
+      if (ok) { rested = m; break; }
+    }
+    expect(rested).toBeDefined();
+    const after = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-07", { pad: 0 });
+    const days = after.shifts.filter((s) => s.label === "Day Team" && after.ctx.assignments.some((a) => a.shiftId === s.id && a.staffId === rested!.id)).map((s) => s.date);
     expect(days).toEqual(["2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04", "2026-12-05", "2026-12-06", "2026-12-07"]);
   });
 
   test("refuses the whole Block when one day breaks a Hard Rule, naming the day", async () => {
-    const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
     const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-05", "2026-12-05", { pad: 0 });
     const dec5Admit = snap.shifts.find((s) => s.label === "Admitter" && s.date === "2026-12-05")!;
-    await expect(assignBlock(db, scheduler, dec5Admit.id, leo.id, 3)).rejects.toThrow(/2026-12-05 breaks a Hard Rule/);
+    await expect(assignBlock(db, scheduler, dec5Admit.id, rested!.id, 3)).rejects.toThrow(/2026-12-05 breaks a Hard Rule/);
     const after = await loadSnapshot(db, scheduler.departmentId, "2026-12-05", "2026-12-07", { pad: 0 });
-    expect(after.ctx.assignments.filter((a) => a.staffId === leo.id)).toHaveLength(3);
+    expect(after.ctx.assignments.filter((a) => a.staffId === rested!.id)).toHaveLength(3);
+  });
+
+  test("Rest after Block sees a Block that ended before the snapshot's usual week of look-back", async () => {
+    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-15", "2026-12-15");
+    expect(snap.ctx.shifts.some((s) => s.date <= "2026-12-01")).toBe(true);
   });
 });
 
@@ -152,7 +159,7 @@ describe("Staff import", () => {
     const csv = [
       "Name,Email,Clinical Role,FTE,Tags",
       'Dr. Ada Park,ada.park@riverside.example,physician,1,"md; procedures:2027-06-30"',
-      "Dr. Leo Martins,LEO.MARTINS@riverside.example,physician,0.5,md",
+      "Dr. Leo Martins,LEO.MARTINS@riverside.example,,0.5,",
       "No Email,,physician,1,md",
     ].join("\n");
     const r = await importStaff(db, admin, csv, NOW);
@@ -164,6 +171,8 @@ describe("Staff import", () => {
     expect(adaUser.permission).toBe("staff");
     const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
     expect(leo.fte).toBe(0.5);
+    expect(leo.clinicalRole).toBe("physician"); // blank cell keeps the existing value
+    expect(leo.tags).toEqual([]); // the Tags column is present and blank: no Tags
   });
 
   test("only admins can import", async () => {

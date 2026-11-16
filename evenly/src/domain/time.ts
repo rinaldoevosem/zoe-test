@@ -97,3 +97,10 @@ export function instantToLocalMinute(instant: number, timeZone: string): number 
   const t = new TZDate(instant, timeZone);
   return t.getHours() * 60 + t.getMinutes();
 }
+
+/** Whether `s` is a real calendar date written YYYY-MM-DD (rejects 2027-02-30). */
+export function isLocalDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10)));
+  return d.toISOString().slice(0, 10) === s;
+}

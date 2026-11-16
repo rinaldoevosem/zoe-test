@@ -64,6 +64,12 @@ describe("Continuity in Auto-fill", () => {
     expect(blocksOf(added).every(([, n]) => n === 1)).toBe(true);
   });
 
+  test("a Soft consecutive-day limit still ends a Block (Continuity never outranks the Block's own limits)", () => {
+    const rules = rulesOff({ maxConsecutiveDays: { enabled: true, hard: false, value: 3 }, continuity: { enabled: true } });
+    const { added } = autofill(ctx({ staff: [staff("ana"), staff("bo")], shifts: fortnight(5, 10), rules }));
+    expect(blocksOf(added)).toEqual([["ana", 3], ["bo", 3]]);
+  });
+
   test("the Explanation says the pick continues a Block", () => {
     const { explanations } = autofill(ctx({ staff: [staff("ana"), staff("bo")], shifts: fortnight(5, 7), rules: blockRules() }));
     expect(explanations[0].summary).not.toContain("continues their Block");

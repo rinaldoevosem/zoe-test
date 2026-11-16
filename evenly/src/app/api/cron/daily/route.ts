@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { connection, type NextRequest } from "next/server";
 import { currentInstant } from "@/server/clock";
 import { getDb } from "@/server/db";
@@ -11,7 +12,9 @@ export async function GET(req: NextRequest) {
   await connection();
   const secret = process.env.CRON_SECRET;
   if (!secret) return Response.json({ error: "CRON_SECRET is not configured" }, { status: 503 });
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const given = Buffer.from(req.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  if (given.length !== expected.length || !timingSafeEqual(given, expected)) return Response.json({ error: "unauthorized" }, { status: 401 });
   const db = await getDb();
   return Response.json(await runDailyJob(db, currentInstant()), { headers: { "cache-control": "no-store" } });
 }

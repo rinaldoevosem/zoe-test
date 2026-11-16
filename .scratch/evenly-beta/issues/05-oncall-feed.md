@@ -13,3 +13,7 @@ Who's On Call API returns the next 48 hours with stable IDs, as JSON or CSV.
 
 - [x] /api/on-call?hours=48 lists every on-call Assignment overlapping the window
 - [x] format=csv returns a CSV with stable Staff Member and Shift IDs
+
+## Comments
+- Review follow-up: `format=csv` (bulk phone numbers) is limited to schedulers and admins. Phone numbers like `+1 555 0100` are no longer mangled by the spreadsheet-formula guard.
+- Not done: a paging system can't call the endpoint yet, because it needs a signed-in session. Integration tokens per Department belong with production auth (v1 ticket 14).

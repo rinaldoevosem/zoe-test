@@ -5,6 +5,7 @@ import { computeLoad } from "@/domain/load";
 import { checkAssignment, checkCandidate, evaluate, hasHard, totalPenalty } from "@/domain/rules";
 import { addDays, eachDate, weekday } from "@/domain/time";
 import type { Violation } from "@/domain/types";
+import { currentInstant } from "../clock";
 import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot, within } from "../repo";
 import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
@@ -138,7 +139,7 @@ export async function assignBlock(db: DB, actor: Actor, shiftId: string, staffId
   const names = await staffNames(db, [staffId]);
   await audit(db, actor, "assignment.block", `Assigned ${names.get(staffId)} to ${type.name} for ${toAdd.length} days from ${toAdd[0].date}`, { staffId, shiftIds: toAdd.map((t) => t.shiftId), warnings: warnings.map((v) => v.message) });
   const publishedPeriods = await db.select({ id: schedulePeriods.id }).from(schedulePeriods)
-    .where(and(eq(schedulePeriods.departmentId, actor.departmentId), eq(schedulePeriods.status, "published")));
+    .where(and(eq(schedulePeriods.organizationId, actor.organizationId), eq(schedulePeriods.departmentId, actor.departmentId), eq(schedulePeriods.status, "published")));
   const published = new Set(publishedPeriods.map((r) => r.id));
   if (snap.shifts.some((s) => toAdd.some((t) => t.shiftId === s.id) && published.has(s.periodId))) {
     await notify(db, actor.organizationId, [staffId], { category: "schedule", title: "You were given a Block", body: `${type.name}, ${toAdd[0].date} to ${toAdd.at(-1)!.date}`, href: "/me" });
@@ -156,6 +157,11 @@ export async function unassign(db: DB, actor: Actor, assignmentId: string) {
   await audit(db, actor, "assignment.remove", `Removed ${names.get(a.staffMemberId)} from ${type.name} on ${shift.date}`, { shiftId: shift.id, staffId: a.staffMemberId });
   if (period.status === "published") {
     await notify(db, actor.organizationId, [a.staffMemberId], { category: "schedule", title: "You were removed from a Shift", body: `${type.name} on ${shift.date}`, href: "/me" });
+    // Removing cover from a published on-call Shift within 24 hours is Urgent now, not at the next daily run.
+    if (type.onCall) {
+      const { alertUrgentGaps } = await import("./daily");
+      await alertUrgentGaps(db, await getDepartment(db, actor.departmentId), currentInstant());
+    }
   }
 }
 

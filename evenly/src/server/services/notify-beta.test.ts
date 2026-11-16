@@ -6,6 +6,7 @@ import { loadSnapshot } from "../repo";
 import { notifySchedulers } from "./common";
 import { runDailyJob } from "./daily";
 import { dispatchDue } from "./delivery";
+import { saveStaffMember } from "./settings";
 
 // Daily job, Urgent alerts, Deliveries and Quiet Hours (.scratch/evenly-beta tickets 07 and 08).
 // Providers are "configured" with test keys and `fetch` is stubbed, so the real Resend/Twilio request code runs.
@@ -48,7 +49,7 @@ describe("daily job", () => {
     sent.length = 0;
     const r = await runDailyJob(db, NOW);
     expect(r.urgentGaps).toBe(1);
-    const alerts = await db.select().from(schema.notifications).where(eq(schema.notifications.dedupeKey, `gap:${tonight.id}`));
+    const alerts = await db.select().from(schema.notifications).where(eq(schema.notifications.dedupeKey, `gap:${tonight.id}:`)); // key follows current cover: nobody
     expect(alerts.map((a) => a.title)).toContain("Urgent: Nocturnist on 2026-11-16 needs 2 more");
     expect(alerts.every((a) => a.category === "urgent")).toBe(true);
     const ds = await db.select().from(schema.deliveries).where(eq(schema.deliveries.subject, "Urgent: Nocturnist on 2026-11-16 needs 2 more"));
@@ -84,5 +85,19 @@ describe("Quiet Hours", () => {
     const ds = await db.select().from(schema.deliveries).where(eq(schema.deliveries.subject, "No provider"));
     expect(ds.length).toBeGreaterThan(0);
     expect(ds.every((d) => d.status === "skipped" && d.detail === "No email provider configured")).toBe(true);
+  });
+});
+
+describe("urgency", () => {
+  test("a re-judge warning after a staff edit is not Urgent: email only, never a text message", async () => {
+    const [admin] = await db.select().from(schema.users).where(eq(schema.users.permission, "admin"));
+    const actor = { userId: admin.id, name: admin.name, permission: admin.permission, organizationId: admin.organizationId, departmentId: admin.departmentId, staffMemberId: admin.staffMemberId };
+    const [ivy] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Ivy Okonkwo"));
+    const { newHardViolations } = await saveStaffMember(db, actor, { id: ivy.id, name: ivy.name, clinicalRole: ivy.clinicalRole, fte: ivy.fte, tags: [], phone: ivy.phone ?? "" }, NOW);
+    expect(newHardViolations.length).toBeGreaterThan(0);
+    const warning = (await db.select().from(schema.notifications).where(eq(schema.notifications.category, "urgent"))).filter((n) => !n.dedupeKey);
+    expect(warning.length).toBeGreaterThan(0);
+    const ds = await db.select().from(schema.deliveries).where(eq(schema.deliveries.notificationId, warning[0].id));
+    expect(ds.map((d) => d.channel)).toEqual(["email"]);
   });
 });
