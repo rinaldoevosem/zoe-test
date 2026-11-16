@@ -1,0 +1,9 @@
+{
+  "name": "Evenly — Clinical Scheduling",
+  "short_name": "Evenly",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f8b8d",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

@@ -1,4 +1,4 @@
-# Hospital identity providers and SSO for Zoe
+# Hospital identity providers and SSO for Evenly
 
 _Researched 2026-11-16 with the `research` skill. **Source limits:** this session's network blocked `better-auth.com`, `workos.com` and other vendor hosts for WebFetch. Better Auth facts marked **[npm]** were checked directly in the published `better-auth`, `@better-auth/sso` and `@better-auth/scim` 1.7.25 packages from the npm registry, so they are high confidence. Everything else comes from search-result summaries of the cited pages and is **lower confidence**. Re-verify prices, BAA terms and advisory ranges before quoting them externally._
 
@@ -9,7 +9,7 @@ _Researched 2026-11-16 with the `research` skill. **Source limits:** this sessio
 - **SCIM is expected at enterprise scale but not needed to launch a single-department pilot.** Plan SCIM 2.0 for Users and Groups to handle deprovisioning, and start the pilot with just-in-time provisioning from SSO.
 - **Better Auth covers SAML, OIDC, per-organization providers, domain verification and SCIM 2.0 well enough for v1** [npm], at no license cost. The price is that we own the security patching: several high-severity SSO advisories were published in 2026.
 - **Phone sessions should be long and sliding, and the hospital's IdP policy decides when to re-check.** Do not wipe the session when the app goes to the background. Leave badge tap to Imprivata on shared workstations.
-- **Locums and private-group physicians** sign in through their own organization's IdP where it is federated, through an Entra B2B guest account if the hospital prefers that, and otherwise through a Zoe-local login with email OTP or magic link plus MFA, scoped to that one organization.
+- **Locums and private-group physicians** sign in through their own organization's IdP where it is federated, through an Entra B2B guest account if the hospital prefers that, and otherwise through a Evenly-local login with email OTP or magic link plus MFA, scoped to that one organization.
 - **Recommendation:** use Better Auth (self-hosted, Drizzle, Postgres) for v1, at about $0 in license cost plus roughly 1–2 engineer-weeks. Keep WorkOS as a fallback that can be swapped in behind the existing session seam, at about $125/month per connection (SSO and SCIM each count as one).
 
 ## Findings
@@ -25,7 +25,7 @@ _Researched 2026-11-16 with the `research` skill. **Source limits:** this sessio
 
 - Okta's catalog (OIN) requires multi-tenant apps and SHA-256 SAML signing. It supports SAML, OIDC and SCIM integrations (https://developer.okta.com/docs/guides/submit-app-prereq/main, https://developer.okta.com/docs/guides/submit-sso-app/saml2/main/). One Okta support thread says SCIM cannot currently be attached to an OIDC OIN app (https://support.okta.com/help/s/question/0D54z0000AE5x9XCQR/could-we-publish-a-scim-provisioning-app-in-oin-without-sso-app-integration). That is a reason to pair SCIM with SAML for Okta customers.
 - Entra provisions to non-gallery apps over SCIM 2.0. Microsoft publishes a list of known compliance quirks, including that `/scim` must be part of the endpoint path, and asks vendors to test with its SCIM Validator (https://learn.microsoft.com/en-us/entra/identity/app-provisioning/application-provisioning-config-problem-scim-compatibility, https://azure.microsoft.com/documentation/articles/active-directory-scim-provisioning/).
-- No public source says QGenda supports SCIM. A search for QGenda SSO documentation returned nothing (search only). Zoe's own landscape note lists "SAML SSO" among QGenda's integrations (docs/research/0001-qgenda-landscape.md).
+- No public source says QGenda supports SCIM. A search for QGenda SSO documentation returned nothing (search only). Evenly's own landscape note lists "SAML SSO" among QGenda's integrations (docs/research/0001-qgenda-landscape.md).
 
 ### Better Auth and alternatives
 
@@ -47,19 +47,19 @@ _Researched 2026-11-16 with the `research` skill. **Source limits:** this sessio
 
 ### (b) Staff not in the hospital IdP
 
-- Entra B2B lets a hospital invite guests who authenticate with their home IdP, so the hospital controls access and the guest's own organization manages credentials (https://learn.microsoft.com/en-us/entra/external-id/what-is-b2b). Zoe then sees them as ordinary Entra users. Locums agencies and private groups may refuse this, so Zoe also needs a fallback local login.
+- Entra B2B lets a hospital invite guests who authenticate with their home IdP, so the hospital controls access and the guest's own organization manages credentials (https://learn.microsoft.com/en-us/entra/external-id/what-is-b2b). Evenly then sees them as ordinary Entra users. Locums agencies and private groups may refuse this, so Evenly also needs a fallback local login.
 
 ### (c) Per-organization SSO configuration
 
-- All the options support per-tenant providers. Better Auth keys a provider to `organizationId` and a verified domain [npm]. Keycloak and WorkOS route users by email domain (see links above). The required controls are: only a Zoe admin or a verified org owner may register a provider (CVE-2026-53515 is the lesson here), domains must be DNS-verified, and JIT linking to existing local accounts must be explicit.
+- All the options support per-tenant providers. Better Auth keys a provider to `organizationId` and a verified domain [npm]. Keycloak and WorkOS route users by email domain (see links above). The required controls are: only a Evenly admin or a verified org owner may register a provider (CVE-2026-53515 is the lesson here), domains must be DNS-verified, and JIT linking to existing local accounts must be explicit.
 
-## Implications for Zoe
+## Implications for Evenly
 
 - Put Better Auth behind the existing session seam. Use the `organization` plugin with one org per department or hospital, the `sso` plugin for SAML and OIDC, and `scim` once the pilot hospital asks for it. Pin exact versions and subscribe to GitHub advisories.
 - Use a sliding session (for example 30 days idle, re-validated at the IdP via `prompt`/`ForceAuthn` only when a policy flag demands it). Never invalidate the session on visibility change. Make the session length configurable per organization so we can match a hospital's Conditional Access policy.
 - Local accounts for locums should use email OTP or magic link plus TOTP or passkey, be scoped to an org, and be invited by a scheduler. SSO-domain users must not be allowed to fall back to a local login.
 - Rough v1 cost: $0 in license, about 1–2 engineer-weeks to integrate and test against Entra plus Okta developer tenants, plus ongoing patching. WorkOS for the same pilot would be about $1.5k a year for SSO alone, or $3k a year with SCIM.
-- Make a BAA decision: Better Auth stores identities in Zoe's own Postgres, so there is no new subprocessor. A hosted vendor would need a BAA, since schedules plus names are probably not PHI but hospitals often ask for one anyway.
+- Make a BAA decision: Better Auth stores identities in Evenly's own Postgres, so there is no new subprocessor. A hosted vendor would need a BAA, since schedules plus names are probably not PHI but hospitals often ask for one anyway.
 
 ## Open questions for the owner
 
@@ -67,7 +67,7 @@ _Researched 2026-11-16 with the `research` skill. **Source limits:** this sessio
 2. Will the pilot hospital's security office require SCIM or a vendor security questionnaire before go-live?
 3. Are personal phones "unmanaged" under the pilot hospital's Conditional Access, which could mean forced 1-hour re-authentication?
 4. Is the team willing to own SAML security patching, or would it rather pay WorkOS to carry that risk?
-5. Will the pilot hospital federate locums via B2B, or does Zoe need local accounts on day one?
+5. Will the pilot hospital federate locums via B2B, or does Evenly need local accounts on day one?
 
 ## Sources
 

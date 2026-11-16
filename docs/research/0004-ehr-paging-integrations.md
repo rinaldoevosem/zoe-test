@@ -5,12 +5,12 @@ _Researched 2026-11-16 with the `research` skill. **Confidence caveat:** WebFetc
 ## Answer
 
 - **Epic On-Call Finder (OCF) is fed by a flat file, not an API.** The vendor that documents it, Lightning Bolt/PerfectServe, sends a CSV to SFTP every 5–10 minutes. The hospital's Epic team imports it and maps it to Epic Team IDs. QGenda and Amion feed the same OCF at Texas Children's, Houston Methodist and Providence, with Amion syncing hourly. No HL7v2 or FHIR on-call interface turned up.
-- **Epic Secure Chat reads on-call data from OCF.** Clinicians open the OCF team and tap a chat button. One vendor also writes the current on-call person into Secure Chat directly, through a service-account "background user". If Zoe feeds OCF, Secure Chat comes along.
+- **Epic Secure Chat reads on-call data from OCF.** Clinicians open the OCF team and tap a chat button. One vendor also writes the current on-call person into Secure Chat directly, through a service-account "background user". If Evenly feeds OCF, Secure Chat comes along.
 - **Paging and comms vendors pull from the scheduler, or the scheduler pushes to them.** Spok Smart Center is called by QGenda through its XML API every 15 minutes. Spok Go takes a CSV over SFTP. Vocera Engage polls QGenda's REST API through a vendor-built adapter. PerfectServe polls every 15 minutes for the next 48 hours. TigerConnect maps on-call schedules to roles. Voalte mostly just links out to QGenda.
 - **Who builds it:** the comms vendor usually builds and owns the connector, the scheduler supplies an API or file, and hospital IT handles firewalls, SFTP, ID mapping and the Epic import build. QGenda's customer-success team configures its side.
 - **Program cost is small; hospital labour is the real cost.** Epic Vendor Services costs about $1,900/yr. A Showroom Connection Hub listing is reported at about $500/yr per app and requires one live customer first. No Epic certification is required for a flat-file OCF feed. Timelines run on the hospital's Epic build queue: months, and phased.
 - **Day one for a single-department pilot:** don't break the hospital's existing on-call lookup. In practice that means a CSV feed to OCF (if the hospital uses it) or to the switchboard/paging system, plus a read-only web directory. Native comms-vendor adapters come later.
-- **Minimum Zoe surface:** a stable on-call feed (JSON and CSV) with external person IDs, team/service IDs and call order. Add SFTP push on a schedule, a webhook on publish or change, and a static, cacheable fallback page. FHIR endpoints are not needed yet.
+- **Minimum Evenly surface:** a stable on-call feed (JSON and CSV) with external person IDs, team/service IDs and call order. Add SFTP push on a schedule, a webhook on publish or change, and a static, cacheable fallback page. FHIR endpoints are not needed yet.
 
 ## Detailed findings
 
@@ -47,12 +47,12 @@ The pattern is consistent: the comms vendor builds the connector against a sched
 - Because Spok, Vocera and PerfectServe pull 48 hours ahead and store future assignments, they keep routing through a short scheduler outage (https://pubs.vocera.com/rnotes/ReleaseNotes_adapter_vocera_amion_1.1.0.html; https://www.perfectserve.com/integrations/scheduling-solutions/).
 - Third-party monitors log QGenda incidents of roughly 40 minutes on average (https://pingoru.io/providers/qgenda/outage-history).
 
-## Implications for Zoe
+## Implications for Evenly
 
-1. **Day one (inference):** a pilot department sits inside a hospital whose operators and other departments already look up on-call somewhere: OCF, Spok or a paging console, or Amion/QGenda web. Zoe must feed that place, or the pilot breaks enterprise lookup.
+1. **Day one (inference):** a pilot department sits inside a hospital whose operators and other departments already look up on-call somewhere: OCF, Spok or a paging console, or Amion/QGenda web. Evenly must feed that place, or the pilot breaks enterprise lookup.
    - The cheapest universal door is a **scheduled CSV-over-SFTP export** of the current plus next-48h on-call. Columns: external person ID (Epic user ID / messaging ID), service/team external ID, role, call order, start and end time (UTC and local), contact note.
-   - Hospital IT does the import, so Zoe needs no Epic contract.
-2. **Later:** vendor-built adapters (Vocera, PerfectServe, TigerConnect) and a Spok push. These come once a comms vendor agrees to build against Zoe's API, which a single pilot won't trigger.
+   - Hospital IT does the import, so Evenly needs no Epic contract.
+2. **Later:** vendor-built adapters (Vocera, PerfectServe, TigerConnect) and a Spok push. These come once a comms vendor agrees to build against Evenly's API, which a single pilot won't trigger.
 3. **Minimum API surface:**
    - Today's JSON on-call endpoint, extended with a date range (≥48 h ahead) and stable external IDs per person and team.
    - Token auth plus IP allow-listing.
@@ -61,14 +61,14 @@ The pattern is consistent: the comms vendor builds the connector against a sched
    - An admin-editable ID-mapping table.
    - Failure emails for mapping errors.
 4. **Defer** FHIR endpoints, HL7v2 and Epic Showroom listings. Epic exposes no write path for on-call, and Connection Hub needs a live customer first.
-5. **Downtime:** publish a static, cacheable on-call page and a printable PDF. Make the 48h-ahead feed the norm so downstream systems keep routing while Zoe is down. State an RTO for the directory separately from the scheduler.
+5. **Downtime:** publish a static, cacheable on-call page and a printable PDF. Make the 48h-ahead feed the norm so downstream systems keep routing while Evenly is down. State an RTO for the directory separately from the scheduler.
 
 ## Open questions for the owner
 
 1. Which on-call lookup does the pilot hospital use today (Epic OCF, Spok, Amion, QGenda), and who owns it?
 2. Will the pilot hospital's Epic team schedule an OCF import build, and how long is their queue?
-3. Which external IDs can Zoe store per person: Epic user ID, Spok messaging ID, Vocera login?
-4. Is hosting SFTP (vs. pushing to hospital SFTP) acceptable to Zoe's security posture?
+3. Which external IDs can Evenly store per person: Epic user ID, Spok messaging ID, Vocera login?
+4. Is hosting SFTP (vs. pushing to hospital SFTP) acceptable to Evenly's security posture?
 5. Should someone re-run this with network access to open.epic.com and knowledge.spok.com to confirm fields and fees?
 
 ## Sources

@@ -3,7 +3,7 @@
 These skills are vendored verbatim from [mattpocock/skills](https://github.com/mattpocock/skills)
 (commit `5863806dd4e15c63174bee4e7515a4256792ecfa`), MIT licensed — see `LICENSE-mattpocock-skills`.
 
-They drive the development workflow of **Zoe** (see `/CLAUDE.md`):
+They drive the development workflow of **Evenly** (see `/CLAUDE.md`):
 
 | Stage | Skill | Output in this repo |
 | --- | --- | --- |
@@ -13,7 +13,7 @@ They drive the development workflow of **Zoe** (see `/CLAUDE.md`):
 | Roadmap (multi-session) | `/wayfinder` → map of decision tickets | `.scratch/<effort>/map.md`, `.scratch/<effort>/issues/*` |
 | Spec | `/to-spec` | `.scratch/<feature>/spec.md` |
 | Tickets | `/to-tickets` | `.scratch/<feature>/issues/NN-*.md` |
-| Build | `/implement` → `tdd` at agreed seams, `codebase-design` | `zoe/src/**` + tests |
+| Build | `/implement` → `tdd` at agreed seams, `codebase-design` | `evenly/src/**` + tests |
 | Review | `code-review`, `/improve-codebase-architecture` | review notes, new tickets |
 | Bugs | `diagnosing-bugs` | regression tests |
 

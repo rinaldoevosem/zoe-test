@@ -5,10 +5,10 @@ _Researched 2026-11-16 with the `research` skill. **Confidence note:** WebFetch 
 ## Answer
 
 - **A staff work schedule is not PHI.** PHI excludes "employment records held by a covered entity in its role as employer" (45 CFR 160.103). Who works which shift, on-call rosters, time-off, punches and payroll exports are employment data. They become PHI only when they carry **patient** information.
-- **Zoe needs a BAA only if it creates, receives, maintains or transmits patient PHI** for the hospital. A cloud host that stores PHI is a business associate even if it can't read the data, and the "conduit" exception covers transmission only. If Zoe stays patient-free, no BAA is legally required. Hospitals may still ask for one, and Zoe should be ready to sign.
+- **Evenly needs a BAA only if it creates, receives, maintains or transmits patient PHI** for the hospital. A cloud host that stores PHI is a business associate even if it can't read the data, and the "conduit" exception covers transmission only. If Evenly stays patient-free, no BAA is legally required. Hospitals may still ask for one, and Evenly should be ready to sign.
 - **SOC 2 and HITRUST are not legal requirements.** They are what hospital procurement asks for. SOC 2 Type II (a CPA's opinion that controls worked over a period) is the usual bar for scheduling vendors. HITRUST is typically asked of vendors that hold PHI at scale, and none of the comparable scheduling vendors publicly claims it.
 - **Encryption and MFA are "addressable" under today's Security Rule.** The January 2025 proposed rule would make both mandatory and add yearly pen tests, but it was not final as of November 2026 (final action is projected for around July 2027). Hospital questionnaires already expect all of these.
-- **The PHI risks in Zoe's features are free text and integrations.** Examples: notes on requests, trades or shifts, any inbound Epic, ADT or census feed, case or patient assignments on the OR or on-call board, and messaging. Employee medical reasons on time-off requests aren't PHI, but the ADA makes them confidential (EEOC).
+- **The PHI risks in Evenly's features are free text and integrations.** Examples: notes on requests, trades or shifts, any inbound Epic, ADT or census feed, case or patient assignments on the OR or on-call board, and messaging. Employee medical reasons on time-off requests aren't PHI, but the ADA makes them confidential (EEOC).
 - **For the v1 pilot, design out PHI and sign no BAA.** Ship hospital SSO, audit logs, encryption, MFA, US hosting, a third-party pen test and a security packet (a CAIQ or SIG Lite answer set). Start the SOC 2 Type II observation window now. HITRUST, TX-RAMP and any HIPAA program can wait for scale or for the first PHI-bearing feature.
 
 ## Findings
@@ -30,7 +30,7 @@ _Researched 2026-11-16 with the `research` skill. **Confidence note:** WebFetch 
   - report breaches under 164.410 (without unreasonable delay, ≤60 days);
   - bind its subcontractors to the same terms;
   - return or destroy PHI at termination (https://www.govinfo.gov/content/pkg/CFR-2021-title45-vol2/pdf/CFR-2021-title45-vol2-sec164-504.pdf ; https://www.hhs.gov/hipaa/for-professionals/privacy/guidance/business-associates/index.html).
-- If Zoe ever takes on PHI, it must also hold BAAs with its own hosting, email and logging providers (https://www.hhs.gov/hipaa/for-professionals/special-topics/cloud-computing).
+- If Evenly ever takes on PHI, it must also hold BAAs with its own hosting, email and logging providers (https://www.hhs.gov/hipaa/for-professionals/special-topics/cloud-computing).
 
 ### Security Rule trajectory
 
@@ -66,7 +66,7 @@ These come from vendor-risk guides, not a primary standard, so they are lower co
 
 - The ADA requires an employer to keep employee medical information, including details volunteered with a leave request, in separate confidential files (https://www.eeoc.gov/laws/guidance/family-and-medical-leave-act-ada-and-title-vii-civil-rights-act-1964).
 - A dissenting brief reads the rule more narrowly (https://www.adagreatlakes.org/Publications/Legal_Briefs/BriefNo31_Confidentiality_Requirements_Under_the_ADA_2018.pdf).
-- Either way, a time-off reason such as "chemo" is not PHI, but it is sensitive. Zoe should not collect it.
+- Either way, a time-off reason such as "chemo" is not PHI, but it is sensitive. Evenly should not collect it.
 
 ### What comparable vendors claim
 
@@ -78,7 +78,7 @@ These come from vendor-risk guides, not a primary standard, so they are lower co
 
 PerfectServe needs SOC 2 and HIPAA because its clinical messaging carries PHI, and Lightning Bolt pushes schedules to Amion about every 10 minutes (https://www.lightning-bolt.com/integrations/secure-messaging/).
 
-## Implications for Zoe
+## Implications for Evenly
 
 1. **Make "no patient data" an architectural rule (ADR).** Specifically:
    - Assign people to shift types, locations and rooms, never to patients or cases.
@@ -86,7 +86,7 @@ PerfectServe needs SOC 2 and HIPAA because its clinical messaging carries PHI, a
    - Epic and paging integrations are outbound only (sending who is on call). Do not ingest ADT, census or case data.
    - Census or acuity, if ever needed, enters only as a manually entered aggregate number per unit.
 2. **Control free text.** Replace "reason" fields on time-off requests, trades and shifts with category picklists (Vacation, CME, Sick/Personal, Other). Make any remaining note field short and private (visible only to the requester and approver), with UI copy that says "Do not include patient or medical details". Exclude notes from ICS feeds, notifications and payroll exports.
-3. **Keep a BAA template ready, but don't lead with it.** The default position is "Zoe holds no PHI; BAA not required". If the pilot hospital insists, sign only after vendor BAAs are in place with the host, email and logging providers.
+3. **Keep a BAA template ready, but don't lead with it.** The default position is "Evenly holds no PHI; BAA not required". If the pilot hospital insists, sign only after vendor BAAs are in place with the host, email and logging providers.
 4. **v1 pilot minimum:**
    - SAML/OIDC SSO plus MFA for local accounts.
    - Role-based access.
@@ -110,8 +110,8 @@ PerfectServe needs SOC 2 and HIPAA because its clinical messaging carries PHI, a
 
 - Will the pilot department's security team accept "no PHI + SOC 2 in progress + pen-test letter", or do they need a SOC 2 Type II report or BAA at signing?
 - Is any PHI-adjacent feature planned within 12 months (OR case assignment, census-driven staffing, Epic inbound)? If yes, budget for a HIPAA program and possibly HITRUST.
-- Which hosting provider and region will Zoe use? Does the pilot require US-only data and support access?
-- Is Zoe offered as hosted SaaS, self-hosted, or both? If self-hosted (the MIT core), the hospital owns most controls, which changes the questionnaire answers.
+- Which hosting provider and region will Evenly use? Does the pilot require US-only data and support access?
+- Is Evenly offered as hosted SaaS, self-hosted, or both? If self-hosted (the MIT core), the hospital owns most controls, which changes the questionnaire answers.
 - Should someone with network access re-verify these sources (HHS, eCFR, AICPA, trust.qgenda.com)?
 
 ## Sources

@@ -4,10 +4,10 @@ _Researched 2026-11-16 with the `research` skill (background agent). Network lim
 
 ## Answer
 
-- **Ship greedy in v1.** Zoe's v1 gap-filling pass already respects locks and records why it made each pick. No solver beats it on explanations, and none adds less to the stack. Its weak spot is fairness across the whole period, because each pick is final and nothing goes back to rebalance earlier choices.
-- **CP-SAT (OR-Tools, Apache-2.0) is the best fit for a future solver adapter.** It is the strongest open-source CP solver. It models the rules Zoe uses (rest, consecutive days, weekly caps) directly. It can hard-fix Locked Assignments, take hints, and explain infeasibility through assumptions. It has no official Node binding, so it needs a Python sidecar.
+- **Ship greedy in v1.** Evenly's v1 gap-filling pass already respects locks and records why it made each pick. No solver beats it on explanations, and none adds less to the stack. Its weak spot is fairness across the whole period, because each pick is final and nothing goes back to rebalance earlier choices.
+- **CP-SAT (OR-Tools, Apache-2.0) is the best fit for a future solver adapter.** It is the strongest open-source CP solver. It models the rules Evenly uses (rest, consecutive days, weekly caps) directly. It can hard-fix Locked Assignments, take hints, and explain infeasibility through assumptions. It has no official Node binding, so it needs a Python sidecar.
 - **HiGHS via `highs-js` (MIT, WASM) is the only option that runs in-process in Node.** It is single-threaded, though. A MILP for rest and sequence rules needs many linking constraints, so I expect it to scale worse than CP-SAT at 300 staff × 3 months. That is an inference and still needs a benchmark.
-- **Timefold Community (Apache-2.0) is a capable local-search engine with native pinning, but it runs on the JVM.** Its explanation features (Score Analysis and the Recommendation API) are **Enterprise-only (commercial)**. That removes its biggest advantage for Zoe.
+- **Timefold Community (Apache-2.0) is a capable local-search engine with native pinning, but it runs on the JVM.** Its explanation features (Score Analysis and the Recommendation API) are **Enterprise-only (commercial)**. That removes its biggest advantage for Evenly.
 - **Gurobi is the fastest MILP solver but has commercial, quote-only licensing.** CBC (EPL-2.0) is in volunteer maintenance. Neither is a good fit for an open-source core.
 - **The literature favours exact or hybrid methods.** Exact or hybrid IP methods won both nurse rostering competitions (INRC-I and INRC-II). Pure exact solvers struggle on the largest benchmark instances, where column-generation and metaheuristic hybrids win **(LC)**. None of the top entries was a plain greedy method.
 - **When to add the adapter:** add a CP-SAT adapter behind the same Auto-fill interface when a department reports fairness spread (Load max−min or standard deviation, per FTE) above an agreed threshold after greedy runs. Also add it when greedy leaves gaps unfilled that a feasibility check shows could be filled. Keep greedy as the default and as the fallback.
@@ -15,12 +15,12 @@ _Researched 2026-11-16 with the `research` skill (background agent). Network lim
 ## Findings
 
 ### Greedy (today)
-Constructive heuristics are fast and easy to explain, but they never revisit an earlier pick. Nurse rostering research has instead been driven by hybrids of IP and local search. The INRC-2010 winner solved sub-problems in sequence with IP and then ran local search over partial schedules (https://econpapers.repec.org/RePEc:eee:ejores:v:219:y:2012:i:2:p:425-433, **LC**). Timefold itself uses a greedy construction heuristic only as a first phase, or for one-off "recommend a fit" queries, and relies on local search for quality (https://github.com/TimefoldAI/timefold-solver/blob/main/docs/src/modules/ROOT/pages/responding-to-change/recommendation-api.adoc). That one-off query is the same job as Zoe's per-gap pick.
+Constructive heuristics are fast and easy to explain, but they never revisit an earlier pick. Nurse rostering research has instead been driven by hybrids of IP and local search. The INRC-2010 winner solved sub-problems in sequence with IP and then ran local search over partial schedules (https://econpapers.repec.org/RePEc:eee:ejores:v:219:y:2012:i:2:p:425-433, **LC**). Timefold itself uses a greedy construction heuristic only as a first phase, or for one-off "recommend a fit" queries, and relies on local search for quality (https://github.com/TimefoldAI/timefold-solver/blob/main/docs/src/modules/ROOT/pages/responding-to-change/recommendation-api.adoc). That one-off query is the same job as Evenly's per-gap pick.
 
 ### CP-SAT (Google OR-Tools)
 - **Licence and languages:** Apache-2.0. The core is C++, with wrappers for Python, Java and C#. There is no official JavaScript binding (https://github.com/google/or-tools). Community WASM ports exist (`cpsat-js`, `or-tools-wasm`), but they are early-stage **(LC)** (https://www.pkgstats.com/pkg:cpsat-js).
 - **Solution quality:** CP-SAT won gold in every MiniZinc Challenge 2025 category it entered **(LC)** (https://minizinc.org/challenge/2025/results).
-- **Shift scheduling example:** The official example covers hard and soft sequence lengths, weekly sum bounds with linear penalties, forbidden transitions (Night→Morning), fixed assignments and weighted requests. It runs with a default limit of `max_time_in_seconds:10.0` (https://github.com/google/or-tools/blob/stable/examples/python/shift_scheduling_sat.py). These map one-to-one onto Zoe's rules.
+- **Shift scheduling example:** The official example covers hard and soft sequence lengths, weekly sum bounds with linear penalties, forbidden transitions (Night→Morning), fixed assignments and weighted requests. It runs with a default limit of `max_time_in_seconds:10.0` (https://github.com/google/or-tools/blob/stable/examples/python/shift_scheduling_sat.py). These map one-to-one onto Evenly's rules.
 - **Re-solving only the gaps:**
   - Locked Assignments can become fixed variables.
   - `add_hint` seeds the search with the existing schedule (https://github.com/google/or-tools/blob/stable/ortools/sat/python/cp_model.py).
@@ -30,8 +30,8 @@ Constructive heuristics are fast and easy to explain, but they never revisit an 
   - `num_workers` sets the thread count, and 0 means use all cores.
   - `interleave_search` makes the search "deterministic (independently of num_workers!)".
   - `max_deterministic_time` gives limits that do not depend on wall-clock speed (https://github.com/google/or-tools/blob/stable/ortools/sat/sat_parameters.proto).
-  - Deterministic runs matter for Zoe's "same input, same output" promise.
-- **Explaining infeasibility:** `add_assumptions` combined with `sufficient_assumptions_for_infeasibility` returns a subset of rule literals that together make the model infeasible (https://github.com/google/or-tools/blob/stable/ortools/sat/python/cp_model.py). Zoe could use this to answer "why is this gap unfillable".
+  - Deterministic runs matter for Evenly's "same input, same output" promise.
+- **Explaining infeasibility:** `add_assumptions` combined with `sufficient_assumptions_for_infeasibility` returns a subset of rule literals that together make the model infeasible (https://github.com/google/or-tools/blob/stable/ortools/sat/python/cp_model.py). Evenly could use this to answer "why is this gap unfillable".
 
 ### Timefold Solver (ex-OptaPlanner)
 - **Licence and editions:** Community is Apache-2.0, for Java and Kotlin (https://github.com/TimefoldAI/timefold-solver). Python support was dropped from 1.25.0 (Aug 2025) and continues only as a community fork **(LC)** (https://pypi.org/project/solverforge-legacy/).
@@ -54,13 +54,13 @@ Examples are simulated annealing, large neighbourhood search (LNS) and tabu sear
 ### (a) Benchmarks: what they say about greedy vs exact
 - **INRC-II:** a multi-stage, week-by-week problem with 4- or 8-week horizons. It had 15 submissions and 7 finalists. The winners used a network-flow MILP (Römer & Mellouli) **(LC)** (https://rd.springer.com/content/pdf/10.1007/s10479-017-2623-z.pdf). A branch-and-price/online stochastic method took second prize **(LC)** (https://www.gerad.ca/en/papers/G-2016-78). The code is open (MIT, COIN-OR BCP): https://github.com/legraina/NurseScheduler.
 - **Curtois/Burke instances (24, from 8 nurses × 2 weeks upward):** the benchmark paper used branch-and-price and ejection chains **(LC)** (https://econpapers.repec.org/RePEc:eee:ejores:v:237:y:2014:i:1:p:71-81). A commercial MIP solver "was unable to produce solutions on the largest instances", where a column-generation heuristic set best-known values **(LC)** (https://nrl.northumbria.ac.uk/id/eprint/42639).
-- **Takeaway:** exact solvers solve small and medium instances to optimality. At large scale, hybrids (decomposition plus local search) win. Plain greedy is not a contender for quality. My inference is that Zoe's sizes (20–300 staff, 1–3 months) fall in the middle of this range and at its upper end.
+- **Takeaway:** exact solvers solve small and medium instances to optimality. At large scale, hybrids (decomposition plus local search) win. Plain greedy is not a contender for quality. My inference is that Evenly's sizes (20–300 staff, 1–3 months) fall in the middle of this range and at its upper end.
 
 ### (b) Keeping explanations with a solver
-1. **Constraint-slack explanations.** Model every Soft rule with an explicit penalty variable. After solving, list for each assignment the rules that are binding or penalised and how much slack each has ("Ana: 2 of 5 shifts/week used, 11 h rest ≥ 10 h min"). Zoe can compute this itself from the solution, so it works with any solver.
+1. **Constraint-slack explanations.** Model every Soft rule with an explicit penalty variable. After solving, list for each assignment the rules that are binding or penalised and how much slack each has ("Ana: 2 of 5 shifts/week used, 11 h rest ≥ 10 h min"). Evenly can compute this itself from the solution, so it works with any solver.
 2. **Counterfactuals ("why not Bob?").** Re-solve with the assignment Bob→shift forced, then report the objective delta and which rules became violated. Korikov & Beck formalise this with inverse optimization (https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.CP.2021.35), using appointment scheduling as the example **(LC)** (https://www.ijcai.org/proceedings/2021/0564.pdf).
 3. **Infeasibility.** Use CP-SAT assumptions or a HiGHS IIS to name the minimal set of conflicting rules for each unfilled gap (sources above).
-4. **Hybrid.** Let the solver choose who covers each gap. Then run Zoe's existing greedy ranker on each gap with the solver's choice, and show it as "chosen to balance department Load; best local candidate was X". This keeps the per-pick explanation format Zoe already has.
+4. **Hybrid.** Let the solver choose who covers each gap. Then run Evenly's existing greedy ranker on each gap with the solver's choice, and show it as "chosen to balance department Load; best local candidate was X". This keeps the per-pick explanation format Evenly already has.
 
 ## Comparison
 
@@ -70,10 +70,10 @@ Examples are simulated annealing, large neighbourhood search (LNS) and tabu sear
 | Run time, 300×90d | ms | Seconds to minutes, time-boxed (to benchmark) | Time-boxed, anytime | Risky single-thread (to benchmark) | Fast | Time-boxed |
 | Explainability | Native per pick | Slack, assumptions, counterfactual re-solves | Score Analysis = **Enterprise** | Slack, IIS | Slack, IIS | Custom |
 | Respect locks / fill gaps only | Native | Fixed vars, hints | `@PlanningPin` | Fixed bounds | Fixed bounds | Custom |
-| Licence | Zoe's own (MIT) | Apache-2.0 | Apache-2.0 (EE commercial) | MIT | Commercial | Zoe's own (MIT) |
+| Licence | Evenly's own (MIT) | Apache-2.0 | Apache-2.0 (EE commercial) | MIT | Commercial | Evenly's own (MIT) |
 | From Node | In-process | Python sidecar (or unofficial WASM) | Java sidecar | In-process WASM | Sidecar plus licence server | In-process |
 
-## Implications for Zoe
+## Implications for Evenly
 
 - Keep the deterministic greedy Auto-fill as the v1 default. Its per-pick Explanation is a product advantage over QGenda's opaque optimiser (see 0001).
 - Define a `Solver` port now (input: draft, Locked Assignments, rules, history; output: assignments plus a structured Explanation per assignment). That way a CP-SAT adapter is purely additive.

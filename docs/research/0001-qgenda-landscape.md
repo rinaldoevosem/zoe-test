@@ -4,7 +4,7 @@ _Researched 2026-11-16 with the `research` skill (background agent). Network lim
 
 ## What the incumbent does (capability inventory)
 
-| Area | Capabilities users rely on | Zoe status |
+| Area | Capabilities users rely on | Evenly status |
 | --- | --- | --- |
 | Provider scheduling | Rules engine (series, targets, maximums, distribution %), auto-scheduler balancing call/weekends/holidays with history, staff & task tags, rotations, draft/published states, bulk publish | **v0**: Shift Types, Tags, Rules, deterministic explainable Auto-fill, Load fairness, draft→publish |
 | Requests | Time-off and shift requests, request limits per staff/task, requests dashboard | **v0**: Time-Off Requests + daily Request Limit; per-person quotas → ticket |
@@ -18,9 +18,9 @@ _Researched 2026-11-16 with the `research` skill (background agent). Network lim
 | Mobile | iOS/Android viewer, requests, swaps, push | **v0**: responsive PWA, full parity (ADR-0007) |
 | Integrations | Epic, Workday/ADP/UKG, SAML SSO, REST API v2, one-way ICS | **v0**: ICS rendered on request (ADR-0006), JSON on-call API; SSO seam (ADR-0008) |
 
-## Pain points and how Zoe answers each
+## Pain points and how Evenly answers each
 
-| # | Theme (frequency) | Representative reports (paraphrased) | Zoe answer |
+| # | Theme (frequency) | Representative reports (paraphrased) | Evenly answer |
 | --- | --- | --- | --- |
 | 1 | Mobile logouts / re-auth on every app switch (very frequent) | "Logged out whenever I switch apps or get a text" | PWA with long-lived sliding session; no content-hiding on background (ADR-0007/0008) |
 | 2 | Mobile crashes, months fail to load, truncated month view (frequent) | "Freezes going 2+ months ahead"; "entries overlap in month view" | Server-rendered agenda + month views, jump-to-month picker, no client cache to go stale |

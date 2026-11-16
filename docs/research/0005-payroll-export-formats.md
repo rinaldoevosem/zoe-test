@@ -4,9 +4,9 @@ _Researched 2026-11-16 with the `research` skill. **Confidence caveat:** WebFetc
 
 ## Answer
 
-- **All four vendors work the same way.** Time comes in as **hours or amounts per employee, per date, per pay code**. Each vendor validates the code against a table that the customer configures. None of them accepts Zoe's current "scheduled vs worked variance" shape as is.
+- **All four vendors work the same way.** Time comes in as **hours or amounts per employee, per date, per pay code**. Each vendor validates the code against a table that the customer configures. None of them accepts Evenly's current "scheduled vs worked variance" shape as is.
 - **The minimum export is a long-format CSV.** Each row carries an employee payroll ID, work date, pay code, hours *or* amount, and a source reference. Pay codes come from a per-department mapping table. A vendor preset (ADP WFN paydata column order) can come later.
-- **Overtime is the hard part.** A direct-to-payroll file has to carry regular hours and overtime hours split apart: ADP's file has separate Reg Hours and O/T Hours columns. Hospitals can calculate overtime on the 40-hour week or on the 8/80 system, so Zoe should not calculate overtime in v1. It should feed a timekeeping system or a payroll clerk who does.
+- **Overtime is the hard part.** A direct-to-payroll file has to carry regular hours and overtime hours split apart: ADP's file has separate Reg Hours and O/T Hours columns. Hospitals can calculate overtime on the 40-hour week or on the 8/80 system, so Evenly should not calculate overtime in v1. It should feed a timekeeping system or a payroll clerk who does.
 - **Hospitals usually route time through timekeeping.** The typical path is scheduling → timekeeping (often UKG) → payroll. UKG maps its own pay codes to payroll earning codes, and both UKG and QGenda advertise schedule-into-timekeeping interfaces. For the pilot, the realistic first target is "UKG import or a payroll clerk's spreadsheet", not a native ADP or Workday integration.
 - **Physicians are paid differently.** They are FLSA-exempt with no salary test, so overtime does not apply to them. Their pay is mostly **flat amounts**: call stipends, per-shift rates and differentials. The export therefore needs an `amount` column as well as `hours`.
 - **Partner programs are gated, and fees are not public.** ADP takes a revenue share and remits it 60–90 days later. Workday has Approved, Certified and Built badges. UKG and Dayforce require application. None of them is needed for a single-department CSV pilot.
@@ -47,7 +47,7 @@ _Researched 2026-11-16 with the `research` skill. **Confidence caveat:** WebFetc
 ### (b) Typical hospital flow
 - UKG markets its own physician scheduler, EZCall, as "integrated with all UKG workforce platforms" so that it automates timekeeping and payroll (https://contentmain.www.ukg.com/sites/default/files/2023-04/hc0330-usv4-ezcall-physicians-ds.pdf). That positioning shows timekeeping sits between scheduling and payroll.
 - QGenda's staff product pulls location, shift type and pay rate *from the schedule into clock-in* (https://platform.softwareone.com/product/qgenda-time-and-attendance-for-nurse-and-staff/PCP-9035-3950).
-- UKG's pay-code-to-earning-code mapping layer (above) is where hospitals keep pay policy. Zoe should feed that layer, not replace it.
+- UKG's pay-code-to-earning-code mapping layer (above) is where hospitals keep pay policy. Evenly should feed that layer, not replace it.
 
 ### (c) Partner programs
 - **ADP Marketplace.** Partners must be accepted and must sign a sandbox agreement before they get API access. ADP bills the client and remits the partner's share net of ADP's share in 60–90 days. The percentage is not public (https://marketplace-cdn.adp.com/dev-portal/pdf/protected/ADP_Marketplace_Pricing_and_How_to_Setup_Free_Trial; https://adp.com/who-we-serve/by-partner/software-providers-development.aspx).
@@ -62,10 +62,10 @@ _Researched 2026-11-16 with the `research` skill. **Confidence caveat:** WebFetc
 - **Integration list.** Integration targets include ADP, Workday and Kronos (https://intuitionlabs.ai/software/pdfs/qgenda.pdf).
 - **Gap.** I found no public export layout for QGenda, and every QGenda claim here comes from a secondary source.
 
-## Implications for Zoe
+## Implications for Evenly
 
-1. **Keep calculation out of v1.** Zoe should export classified time, not gross pay. The pilot's timekeeping system or payroll clerk applies overtime (40-hour or 8/80), differentials and the regular-rate rules.
-2. **Add a per-department Pay Code Map.** It maps Zoe's categories (regular worked, call stipend, call-back worked, per-shift, night/weekend/holiday differential) to the customer's code strings. All four vendors reject unknown codes.
+1. **Keep calculation out of v1.** Evenly should export classified time, not gross pay. The pilot's timekeeping system or payroll clerk applies overtime (40-hour or 8/80), differentials and the regular-rate rules.
+2. **Add a per-department Pay Code Map.** It maps Evenly's categories (regular worked, call stipend, call-back worked, per-shift, night/weekend/holiday differential) to the customer's code strings. All four vendors reject unknown codes.
 3. **Make the export idempotent.** Use a stable `source_ref` and a batch ID, because Workday payroll input and UKG punch import both create duplicates if a file is re-run.
 4. **Proposed minimum export schema.** Use long-format CSV, one row per employee × work date × pay code.
 
@@ -89,7 +89,7 @@ _Researched 2026-11-16 with the `research` skill. **Confidence caveat:** WebFetc
 
 1. What does the pilot department load time into: UKG timekeeping, ADP WFN paydata, Workday, or a clerk's spreadsheet? This decides the first preset.
 2. Are the pilot's users physicians (stipend or per-shift pay), hourly staff (overtime), or both?
-3. Who owns overtime and differential calculation: the hospital's timekeeping system, or Zoe in a later version?
+3. Who owns overtime and differential calculation: the hospital's timekeeping system, or Evenly in a later version?
 4. Does the department pay call as a daily stipend, as hourly call-back, or both?
 5. Is there budget or appetite to apply to ADP or UKG partner programs within 12 months?
 6. Can someone with access to a hospital tenant confirm the exact ADP EPI headers and the UKG import schema? I could not fetch those primary pages.

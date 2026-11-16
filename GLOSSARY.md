@@ -1,6 +1,6 @@
-# Zoe — Clinical Workforce Scheduling
+# Evenly — Clinical Workforce Scheduling
 
-Zoe plans who works which clinical shift, keeps that plan legal and fair, and lets staff trade, request and see their work from anywhere.
+Evenly plans who works which clinical shift, keeps that plan legal and fair, and lets staff trade, request and see their work from anywhere.
 
 ## Organization
 
@@ -79,7 +79,7 @@ _Avoid_: Conflict, error
 The numeric cost of Soft Rule Violations; Auto-fill minimises it.
 
 **Auto-fill**:
-Zoe filling Coverage Gaps in a Schedule Period without breaking Hard Rules, minimising Penalty, and never moving Locked Assignments.
+Evenly filling Coverage Gaps in a Schedule Period without breaking Hard Rules, minimising Penalty, and never moving Locked Assignments.
 _Avoid_: Auto-schedule, optimizer, generate
 
 **Explanation**:
