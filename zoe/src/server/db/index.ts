@@ -12,7 +12,8 @@ const MIGRATIONS = path.join(process.cwd(), "drizzle");
 
 /**
  * Zero-setup by default: an embedded Postgres (PGlite) persisted under `.data/`.
- * `DATABASE_URL` switches to a real Postgres; `ZOE_DB=memory` gives a throwaway database (tests, e2e).
+ * `DATABASE_URL` switches to a real Postgres; `ZOE_DB=memory` gives a throwaway database (tests, e2e,
+ * and Vercel previews, whose server can't write to its own folder).
  */
 async function connect(): Promise<DB> {
   if (process.env.DATABASE_URL) {
@@ -25,7 +26,8 @@ async function connect(): Promise<DB> {
     await migrate(db, { migrationsFolder: MIGRATIONS });
     return db as unknown as DB;
   }
-  const dataDir = process.env.ZOE_DB === "memory" ? undefined : path.join(process.cwd(), ".data", "pglite");
+  const inMemory = process.env.ZOE_DB === "memory" || (!process.env.ZOE_DB && !!process.env.VERCEL);
+  const dataDir = inMemory ? undefined : path.join(process.cwd(), ".data", "pglite");
   return createPgliteDb(dataDir);
 }
 
