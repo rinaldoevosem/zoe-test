@@ -37,6 +37,28 @@ export function computeLoad(ctx: ScheduleContext): LoadRow[] {
     });
 }
 
+export interface FairnessSummary {
+  averageLoad: number;
+  /** Highest minus lowest Load. */
+  spread: number;
+  /** spread ÷ averageLoad. */
+  relativeSpread: number;
+  /** True when the spread is within EQUITABLE_SPREAD of the average. */
+  equitable: boolean;
+}
+
+/** A schedule is called equitable when no one's Load is more than 25% of the average away from anyone else's. */
+export const EQUITABLE_SPREAD = 0.25;
+
+export function fairnessSummary(rows: Pick<LoadRow, "load">[]): FairnessSummary {
+  const loads = rows.map((r) => r.load).filter((l) => Number.isFinite(l));
+  if (!loads.length) return { averageLoad: 0, spread: 0, relativeSpread: 0, equitable: true };
+  const averageLoad = loads.reduce((a, b) => a + b, 0) / loads.length;
+  const spread = Math.max(...loads) - Math.min(...loads);
+  const relativeSpread = averageLoad ? spread / averageLoad : 0;
+  return { averageLoad: round(averageLoad), spread: round(spread), relativeSpread: round(relativeSpread), equitable: relativeSpread <= EQUITABLE_SPREAD };
+}
+
 export function loadOf(weight: number, fte: number): number {
   return fte > 0 ? weight / fte : Number.POSITIVE_INFINITY;
 }

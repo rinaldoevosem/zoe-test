@@ -3,7 +3,7 @@
  * Assignment, equalise Load by FTE, minimise Penalty, and explain every pick. Deterministic.
  */
 import { loadOf } from "./load";
-import { checkAssignment, hasHard, totalPenalty } from "./rules";
+import { checkAssignment, hasHard, matchesPreference, totalPenalty } from "./rules";
 import { isWeekend } from "./time";
 import type { Assignment, RuleKind, ScheduleContext, Shift, ShiftId, StaffId, StaffMember } from "./types";
 
@@ -11,6 +11,8 @@ export interface Candidate {
   staffId: StaffId;
   projectedLoad: number;
   penalty: number;
+  /** The Staff Member has a "want" Preference for this Shift. Breaks ties only; never outweighs Load or Penalty. */
+  wants: boolean;
 }
 
 export interface Explanation {
@@ -79,7 +81,8 @@ export function autofill(input: ScheduleContext): AutofillResult {
           rejections.set(first, (rejections.get(first) ?? 0) + 1);
           continue;
         }
-        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs) });
+        const wants = ctx.rules.preferences.enabled && ctx.preferences.some((p) => p.kind === "want" && matchesPreference(p, m.id, s));
+        eligible.push({ staffId: m.id, projectedLoad: round(load(m, s.weight)), penalty: totalPenalty(vs), wants });
       }
       if (!eligible.length) {
         unfilled.push({
@@ -90,7 +93,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
         });
         break;
       }
-      eligible.sort((a, b) => a.projectedLoad - b.projectedLoad || a.penalty - b.penalty || a.staffId.localeCompare(b.staffId));
+      eligible.sort((a, b) => a.projectedLoad - b.projectedLoad || a.penalty - b.penalty || Number(b.wants) - Number(a.wants) || a.staffId.localeCompare(b.staffId));
       const [pick, ...rest] = eligible;
       const assignment = { shiftId: s.id, staffId: pick.staffId };
       ctx.assignments.push(assignment);
@@ -103,6 +106,7 @@ export function autofill(input: ScheduleContext): AutofillResult {
         summary:
           `Chosen from ${eligible.length} eligible: lowest Load (${pick.projectedLoad})` +
           (pick.penalty ? `, accepting ${pick.penalty} Penalty` : ", no rule warnings") +
+          (pick.wants ? ", asked to work it" : "") +
           (rejections.size ? `; ${[...rejections.values()].reduce((x, y) => x + y, 0)} others excluded by Hard Rules` : ""),
         runnersUp: rest.slice(0, 2),
       });

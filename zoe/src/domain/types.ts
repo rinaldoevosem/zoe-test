@@ -46,6 +46,8 @@ export interface Preference {
   staffId: StaffId;
   date: LocalDate;
   kind: "avoid" | "want";
+  /** When set, the Preference applies only to Shifts of this Shift Type on that date. */
+  shiftTypeId?: string;
 }
 
 export interface ThresholdRule {

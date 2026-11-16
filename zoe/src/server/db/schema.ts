@@ -125,6 +125,8 @@ export const preferences = pgTable("preferences", {
   staffMemberId: text("staff_member_id").notNull().references(() => staffMembers.id),
   date: date("date", { mode: "string" }).notNull(),
   kind: text("kind", { enum: ["avoid", "want"] }).notNull(),
+  /** Null = the whole date; otherwise only Shifts of this Shift Type. */
+  shiftTypeId: text("shift_type_id").references(() => shiftTypes.id),
 });
 
 export const tradeRequests = pgTable("trade_requests", {
@@ -157,14 +159,16 @@ export const auditEvents = pgTable("audit_events", {
 export const notifications = pgTable("notifications", {
   id: id(),
   organizationId: org(),
-  staffMemberId: text("staff_member_id").notNull().references(() => staffMembers.id),
+  /** A Notification goes to a Staff Member, or to a User who works no Shifts (e.g. a scheduler). */
+  staffMemberId: text("staff_member_id").references(() => staffMembers.id),
+  userId: text("user_id").references(() => users.id),
   category: text("category", { enum: ["urgent", "trade", "schedule", "request"] }).notNull(),
   title: text("title").notNull(),
   body: text("body").notNull(),
   href: text("href"),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: createdAt(),
-}, (t) => [index("notifications_staff").on(t.staffMemberId, t.createdAt)]);
+}, (t) => [index("notifications_staff").on(t.staffMemberId, t.createdAt), index("notifications_user").on(t.userId, t.createdAt)]);
 
 export const calendarTokens = pgTable("calendar_tokens", {
   id: id(),

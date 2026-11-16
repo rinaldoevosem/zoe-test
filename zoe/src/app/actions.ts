@@ -137,8 +137,10 @@ export async function tradeAction(tradeId: string, event: "accept" | "decline" |
     r.status === "approved" ? "Approved — schedules updated" : r.status === "accepted" ? "Accepted — awaiting scheduler approval" : `Trade ${r.status}`);
 }
 
-export async function addPreferenceAction(day: string) {
-  return run((db, a) => timeoff.addPreference(db, a, date.parse(day)), () => "Preference saved");
+const preferenceInput = z.object({ date, kind: z.enum(["avoid", "want"]), shiftTypeId: id.optional() });
+
+export async function addPreferenceAction(input: z.infer<typeof preferenceInput>) {
+  return run((db, a) => timeoff.addPreference(db, a, preferenceInput.parse(input)), () => "Preference saved");
 }
 
 export async function removePreferenceAction(preferenceId: string) {
@@ -157,10 +159,17 @@ export async function markAllReadAction() {
   return run((db, a) => inbox.markAllRead(db, a));
 }
 
+const savedMessage = (what: string) => (r: { newHardViolations: unknown[] }) =>
+  r.newHardViolations.length ? `${what} saved — ${r.newHardViolations.length} published Assignment(s) now break a Hard Rule` : `${what} saved`;
+
 export async function saveSettingsAction(input: unknown) {
-  return run((db, a) => settings.saveDepartmentSettings(db, a, input), () => "Settings saved");
+  return run((db, a) => settings.saveDepartmentSettings(db, a, input), savedMessage("Settings"));
 }
 
 export async function saveStaffAction(input: unknown) {
-  return run((db, a) => settings.saveStaffMember(db, a, input), () => "Staff Member saved");
+  return run((db, a) => settings.saveStaffMember(db, a, input), savedMessage("Staff Member"));
+}
+
+export async function saveShiftTypeAction(input: unknown) {
+  return run((db, a) => settings.saveShiftType(db, a, input), () => "Shift Type saved — it applies to Schedule Periods you create from now on");
 }

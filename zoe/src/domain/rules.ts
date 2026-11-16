@@ -7,7 +7,7 @@
  *   newViolations(before, after)       → Violations present in `after` but not in `before`
  */
 import { addDays, shiftInterval, weekStart } from "./time";
-import type { Assignment, ScheduleContext, Shift, StaffId, Violation } from "./types";
+import type { Assignment, Preference, ScheduleContext, Shift, StaffId, Violation } from "./types";
 
 const SOFT_PENALTY = { maxConsecutiveDays: 5, maxShiftsPerWeek: 5, minRest: 8, preference: 3 } as const;
 const HARD_PENALTY = 1000;
@@ -105,8 +105,11 @@ function evaluateStaff(ctx: ScheduleContext, staffId: StaffId, shifts: Shift[]):
     const off = ctx.timeOff.find((t) => t.staffId === staffId && t.startDate <= s.date && s.date <= t.endDate);
     if (off) out.push(v("timeOff", "hard", staffId, s, `${member.name} has approved time off ${off.startDate} – ${off.endDate}`));
     if (ctx.rules.preferences.enabled) {
-      const pref = ctx.preferences.find((p) => p.staffId === staffId && p.date === s.date && p.kind === "avoid");
-      if (pref) out.push(v("preference", "soft", staffId, s, `${member.name} asked not to work ${s.date}`, SOFT_PENALTY.preference));
+      const pref = ctx.preferences.find((p) => p.kind === "avoid" && matchesPreference(p, staffId, s));
+      if (pref) {
+        const what = pref.shiftTypeId ? `${s.label} on ${s.date}` : s.date;
+        out.push(v("preference", "soft", staffId, s, `${member.name} asked not to work ${what}`, SOFT_PENALTY.preference));
+      }
     }
   }
 
@@ -161,6 +164,11 @@ function evaluateStaff(ctx: ScheduleContext, staffId: StaffId, shifts: Shift[]):
     }
   }
   return out;
+}
+
+/** Whether a Preference covers this Staff Member on this Shift (date, and Shift Type when the Preference names one). */
+export function matchesPreference(p: Preference, staffId: StaffId, s: Shift): boolean {
+  return p.staffId === staffId && p.date === s.date && (!p.shiftTypeId || p.shiftTypeId === s.shiftTypeId);
 }
 
 function v(rule: Violation["rule"], severity: Violation["severity"], staffId: StaffId, s: Shift, message: string, softPenalty = 0): Violation {

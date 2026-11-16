@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { and, desc, eq } from "drizzle-orm";
 import { PageHeader } from "@/components/page-header";
 import { ClockButton } from "@/components/misc-actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getDb, schema } from "@/server/db";
+import { getDb } from "@/server/db";
+import { myTimeEntries } from "@/server/services/reports";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
 
@@ -15,7 +15,7 @@ export default async function TimePage() {
   if (!actor.staffMemberId) redirect("/reports");
   const db = await getDb();
   const dept = await getDepartment(db, actor.departmentId);
-  const entries = await db.select().from(schema.timeEntries).where(and(eq(schema.timeEntries.organizationId, actor.organizationId), eq(schema.timeEntries.staffMemberId, actor.staffMemberId))).orderBy(desc(schema.timeEntries.clockIn)).limit(30);
+  const entries = await myTimeEntries(db, actor);
   const open = entries.find((e) => !e.clockOut);
   const fmt = (d: Date) => d.toLocaleString("en-US", { timeZone: dept.timeZone, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
   return (

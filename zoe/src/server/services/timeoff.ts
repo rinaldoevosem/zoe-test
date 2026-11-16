@@ -2,6 +2,8 @@ import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { conflictingAssignments, requestLimitConflicts, validateRange } from "@/domain/timeoff";
 import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot } from "../repo";
+import { currentInstant } from "../clock";
+import { instantToLocalDate } from "@/domain/time";
 import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
 
 const { timeOffRequests, staffMembers } = schema;
@@ -95,13 +97,31 @@ export async function listPreferences(db: DB, actor: Actor) {
     .orderBy(schema.preferences.date);
 }
 
-export async function addPreference(db: DB, actor: Actor, date: string) {
+export interface PreferenceInput {
+  date: string;
+  kind: "avoid" | "want";
+  /** Omit for the whole date. */
+  shiftTypeId?: string;
+}
+
+export async function addPreference(db: DB, actor: Actor, input: PreferenceInput, now = currentInstant()) {
   if (!actor.staffMemberId) throw new DomainError("Only Staff Members have Preferences");
+  const dept = await getDepartment(db, actor.departmentId);
+  if (input.date < instantToLocalDate(now, dept.timeZone)) throw new DomainError("Preferences can't be set for dates in the past");
+  if (input.shiftTypeId) {
+    const [type] = await db.select({ id: schema.shiftTypes.id }).from(schema.shiftTypes)
+      .where(and(eq(schema.shiftTypes.id, input.shiftTypeId), eq(schema.shiftTypes.departmentId, actor.departmentId)));
+    if (!type) throw new DomainError("Shift Type not found");
+  }
   const existing = await listPreferences(db, actor);
-  if (existing.some((p) => p.date === date)) throw new DomainError("You already have a Preference for that date");
-  if (existing.length >= 20) throw new DomainError("You can hold up to 20 Preferences at once");
-  await db.insert(schema.preferences).values({ organizationId: actor.organizationId, staffMemberId: actor.staffMemberId, date, kind: "avoid" });
-  await audit(db, actor, "preference.add", `${actor.name} prefers not to work ${date}`);
+  if (existing.some((p) => p.date === input.date && (p.shiftTypeId ?? null) === (input.shiftTypeId ?? null))) {
+    throw new DomainError("You already have a Preference for that date and Shift Type");
+  }
+  if (existing.length >= 40) throw new DomainError("You can hold up to 40 Preferences at once");
+  await db.insert(schema.preferences).values({
+    organizationId: actor.organizationId, staffMemberId: actor.staffMemberId, date: input.date, kind: input.kind, shiftTypeId: input.shiftTypeId ?? null,
+  });
+  await audit(db, actor, "preference.add", `${actor.name} would ${input.kind === "want" ? "like" : "rather not"} to work ${input.date}`);
 }
 
 export async function removePreference(db: DB, actor: Actor, id: string) {
@@ -109,4 +129,12 @@ export async function removePreference(db: DB, actor: Actor, id: string) {
   const removed = await db.delete(schema.preferences)
     .where(and(eq(schema.preferences.id, id), eq(schema.preferences.staffMemberId, actor.staffMemberId))).returning();
   if (!removed.length) throw new DomainError("Preference not found");
+}
+
+/** The Staff Member's own Time-Off Requests that end on or after `from`. */
+export async function myTimeOffFrom(db: DB, actor: Actor, from: string) {
+  if (!actor.staffMemberId) return [];
+  return db.select().from(timeOffRequests).where(and(
+    eq(timeOffRequests.organizationId, actor.organizationId), eq(timeOffRequests.staffMemberId, actor.staffMemberId), gte(timeOffRequests.endDate, from),
+  ));
 }

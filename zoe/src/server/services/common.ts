@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { can, type Action, type PermissionLevel } from "@/domain/permissions";
 import type { Violation } from "@/domain/types";
 import { schema, type DB } from "../db";
@@ -44,6 +44,19 @@ export async function notify(
   const unique = [...new Set(staffMemberIds)];
   if (!unique.length) return;
   await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...n })));
+}
+
+/** Notifies every User in the Department who may approve trades and edit the schedule (schedulers and admins). */
+export async function notifyApprovers(
+  db: DB,
+  actor: Pick<Actor, "organizationId" | "departmentId">,
+  n: { category: "urgent" | "trade" | "schedule" | "request"; title: string; body: string; href?: string },
+) {
+  const approvers = (await db.select().from(schema.users)
+    .where(and(eq(schema.users.organizationId, actor.organizationId), eq(schema.users.departmentId, actor.departmentId))))
+    .filter((u) => can(u, "trade:approve"));
+  if (!approvers.length) return;
+  await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...n })));
 }
 
 export async function staffNames(db: DB, ids: string[]): Promise<Map<string, string>> {

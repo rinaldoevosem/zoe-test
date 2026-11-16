@@ -1,11 +1,8 @@
 import { can } from "@/domain/permissions";
 import { PageHeader } from "@/components/page-header";
 import { CalendarFeed } from "@/components/misc-actions";
-import { RulesForm, StaffEditor } from "@/components/settings";
-import { Badge } from "@/components/ui/badge";
+import { RulesForm, ShiftTypeEditor, StaffEditor } from "@/components/settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { shiftColor, timeRange } from "@/lib/format";
 import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
@@ -13,7 +10,6 @@ import { hasCalendarToken } from "@/server/services/calendar";
 import { listShiftTypes, listStaff } from "@/server/services/settings";
 
 export const metadata = { title: "Settings" };
-const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 export default async function SettingsPage() {
   const actor = await requireSession();
@@ -54,24 +50,13 @@ export default async function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Shift Types</CardTitle>
-            <CardDescription>New Schedule Periods generate Shifts from these.</CardDescription>
+            <CardDescription>New Schedule Periods generate Shifts from active Shift Types.{!admin && " Only admins can change these."}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader><TableRow><TableHead>Shift Type</TableHead><TableHead>Time</TableHead><TableHead>Days</TableHead><TableHead>Needs</TableHead><TableHead>Requires</TableHead><TableHead className="text-right">Weight</TableHead></TableRow></TableHeader>
-              <TableBody>
-                {types.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell><span className={`mr-2 rounded border px-1.5 py-0.5 text-xs ${shiftColor(t.color)}`}>{t.code}</span>{t.name}{t.onCall && <Badge variant="outline" className="ml-2">on call</Badge>}</TableCell>
-                    <TableCell className="tabular-nums">{timeRange(t.startMinute, t.endMinute)}</TableCell>
-                    <TableCell>{t.weekdays.map((d) => DAYS[d]).join(" ")}</TableCell>
-                    <TableCell>{t.headcount}</TableCell>
-                    <TableCell>{t.requiredTags.join(", ") || "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{t.weight}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <ShiftTypeEditor
+              readOnly={!admin}
+              types={types.map((t) => ({ id: t.id, name: t.name, code: t.code, color: t.color, startMinute: t.startMinute, endMinute: t.endMinute, weekdays: t.weekdays, requiredTags: t.requiredTags, headcount: t.headcount, weight: t.weight, onCall: t.onCall, active: t.active }))}
+            />
           </CardContent>
         </Card>
       </div>

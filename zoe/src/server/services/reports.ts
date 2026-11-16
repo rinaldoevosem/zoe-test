@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { computeLoad, type LoadRow } from "@/domain/load";
 import { shiftInterval, instantToLocalDate } from "@/domain/time";
 import { schema, type DB } from "../db";
@@ -69,4 +69,11 @@ export async function clock(db: DB, actor: Actor, direction: "in" | "out", now =
     if (!current) throw new DomainError("You are not clocked in");
     await db.update(schema.timeEntries).set({ clockOut: now }).where(eq(schema.timeEntries.id, current.id));
   }
+}
+
+export async function myTimeEntries(db: DB, actor: Actor, limit = 30) {
+  if (!actor.staffMemberId) return [];
+  return db.select().from(schema.timeEntries)
+    .where(and(eq(schema.timeEntries.organizationId, actor.organizationId), eq(schema.timeEntries.staffMemberId, actor.staffMemberId)))
+    .orderBy(desc(schema.timeEntries.clockIn)).limit(limit);
 }

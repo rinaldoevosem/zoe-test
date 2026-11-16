@@ -4,7 +4,7 @@
 
 **Blocked by:** 12
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent (claimed)
 
 - [ ] Shift Type create/edit/deactivate (story 1, ticket 12 remainder) — today the table is read-only
 - [ ] Preferences: "want" wishes and Shift-Type-level Preferences (GLOSSARY: Preference); v0 supports date-level "avoid" only

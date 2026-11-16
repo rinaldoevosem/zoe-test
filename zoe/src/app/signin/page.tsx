@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { signInAs } from "@/app/actions";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getDb, schema } from "@/server/db";
+import { listSignInChoices } from "@/server/session";
 
 export const metadata = { title: "Sign in" };
 
@@ -34,24 +34,28 @@ export default function SignInPage() {
 
 async function UserList() {
   await connection();
-  const db = await getDb();
-  const users = await db.select().from(schema.users);
-  const order = { scheduler: 0, admin: 1, staff: 2 } as const;
-  users.sort((a, b) => order[a.permission] - order[b.permission] || a.name.localeCompare(b.name));
+  const groups = await listSignInChoices();
   return (
-    <ul className="flex max-h-[60dvh] flex-col divide-y overflow-auto rounded-md border">
-      {users.map((u) => (
-        <li key={u.id}>
-          <form action={signInAs.bind(null, u.id)}>
-            <button className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-accent" data-testid={`signin-${u.permission}`}>
-              <span className="font-medium">{u.name}</span>
-              <Badge variant={u.permission === "staff" ? "secondary" : "default"} className="capitalize">
-                {u.permission === "admin" ? "admin + staff" : u.permission}
-              </Badge>
-            </button>
-          </form>
-        </li>
+    <div className="flex max-h-[60dvh] flex-col gap-4 overflow-auto">
+      {groups.map((g) => (
+        <section key={g.organization} className="grid gap-2">
+          <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{g.organization}</h2>
+          <ul className="flex flex-col divide-y rounded-md border">
+            {g.users.map((u) => (
+              <li key={u.id}>
+                <form action={signInAs.bind(null, u.id)}>
+                  <button className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm hover:bg-accent" data-testid={`signin-${u.permission}`}>
+                    <span className="font-medium">{u.name}</span>
+                    <Badge variant={u.permission === "staff" ? "secondary" : "default"} className="capitalize">
+                      {u.permission === "admin" ? "admin + staff" : u.permission}
+                    </Badge>
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </ul>
+    </div>
   );
 }

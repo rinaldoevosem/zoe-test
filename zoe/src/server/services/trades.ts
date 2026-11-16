@@ -2,7 +2,7 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { openTrade, previewTrade, transition, type Trade, type TradeEvent } from "@/domain/trades";
 import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot, type Snapshot } from "../repo";
-import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
+import { audit, DomainError, notify, notifyApprovers, require, staffNames, type Actor } from "./common";
 
 const { tradeRequests, assignments, shifts, schedulePeriods } = schema;
 type TradeRow = typeof tradeRequests.$inferSelect;
@@ -64,6 +64,7 @@ export async function createTrade(db: DB, actor: Actor, input: { kind: Trade["ki
   const names = await staffNames(db, [actor.staffMemberId, input.counterpartyId].filter((x): x is string => !!x));
   const summary = describe(res.trade, names, shiftLabels(snap));
   await audit(db, actor, `trade.${res.trade.kind}.${res.trade.status}`, summary, { tradeId: row.id });
+  if (res.trade.status === "accepted") await askApprovers(db, actor, summary);
   if (input.kind === "swap" && input.counterpartyId) {
     await notify(db, actor.organizationId, [input.counterpartyId], { category: "trade", title: "Swap request", body: summary, href: "/trades" });
   }
@@ -87,10 +88,16 @@ export async function actOnTrade(db: DB, actor: Actor, tradeId: string, event: "
   const names = await staffNames(db, parties);
   const summary = describe(res.trade, names, shiftLabels(snap));
   await audit(db, actor, `trade.${event}`, `${summary} — ${res.trade.status}`, { tradeId });
+  if (res.trade.status === "accepted") await askApprovers(db, actor, summary);
   await notify(db, actor.organizationId, parties.filter((p) => p !== actor.staffMemberId), {
     category: "trade", title: `Trade ${res.trade.status}`, body: summary, href: "/trades",
   });
   return { status: res.trade.status, violations: res.violations };
+}
+
+/** Under the manual trade policy, an accepted trade waits for a scheduler: tell them. */
+async function askApprovers(db: DB, actor: Actor, summary: string) {
+  await notifyApprovers(db, actor, { category: "trade", title: "Trade awaiting your approval", body: summary, href: "/trades" });
 }
 
 export async function listTrades(db: DB, actor: Actor) {
@@ -167,4 +174,12 @@ export async function tradeBoard(db: DB, actor: Actor, today: string) {
       snap.ctx.assignments.filter((a) => a.shiftId === s.id && a.staffId !== me).map((a) => ({ staffId: a.staffId, shift: view(s.id)! })),
     ),
   };
+}
+
+/** Shifts the Staff Member has offered in a trade that is still open or awaiting approval. */
+export async function myPendingTradeShiftIds(db: DB, actor: Actor): Promise<Set<string>> {
+  if (!actor.staffMemberId) return new Set();
+  const rows = await db.select({ shiftId: tradeRequests.shiftId, status: tradeRequests.status }).from(tradeRequests)
+    .where(and(eq(tradeRequests.organizationId, actor.organizationId), eq(tradeRequests.requesterId, actor.staffMemberId)));
+  return new Set(rows.filter((r) => r.status === "open" || r.status === "accepted").map((r) => r.shiftId));
 }

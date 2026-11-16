@@ -13,6 +13,7 @@ import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { loadReport, payrollReport } from "@/server/services/reports";
+import { fairnessSummary } from "@/domain/load";
 
 export const metadata = { title: "Reports" };
 
@@ -27,11 +28,11 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const start = valid(sp.start) ? (sp.start as string) : addDays(today, -30);
   const end = valid(sp.end) ? (sp.end as string) : addDays(today, 30);
   const rows = await loadReport(db, actor, start, end);
-  const payroll = await payrollReport(db, actor, addDays(today, -7), addDays(today, -1));
-  const loads = rows.map((r) => r.load).filter((l) => Number.isFinite(l));
-  const avg = loads.reduce((a, b) => a + b, 0) / (loads.length || 1);
-  const max = Math.max(1, ...loads);
-  const spread = loads.length ? Math.max(...loads) - Math.min(...loads) : 0;
+  const pstart = valid(sp.pstart) ? (sp.pstart as string) : addDays(today, -7);
+  const pend = valid(sp.pend) ? (sp.pend as string) : addDays(today, -1);
+  const payroll = await payrollReport(db, actor, pstart, pend);
+  const fairness = fairnessSummary(rows);
+  const max = Math.max(1, ...rows.map((r) => r.load).filter((l) => Number.isFinite(l)));
   const qs = `start=${start}&end=${end}`;
 
   return (
@@ -40,12 +41,14 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         <form className="flex flex-wrap gap-2">
           <Input type="date" name="start" defaultValue={start} aria-label="From" className="w-40" />
           <Input type="date" name="end" defaultValue={end} aria-label="To" className="w-40" />
+          <input type="hidden" name="pstart" value={pstart} />
+          <input type="hidden" name="pend" value={pend} />
           <Button variant="outline">Apply</Button>
         </form>
       </PageHeader>
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Kpi label="Average Load" value={avg.toFixed(1)} />
-        <Kpi label="Load spread (max − min)" value={spread.toFixed(1)} hint={spread / (avg || 1) < 0.25 ? "Equitable" : "Uneven"} />
+        <Kpi label="Average Load" value={fairness.averageLoad.toFixed(1)} />
+        <Kpi label="Load spread (max − min)" value={fairness.spread.toFixed(1)} hint={`${Math.round(fairness.relativeSpread * 100)}% of average · ${fairness.equitable ? "Equitable" : "Uneven"}`} />
         <Kpi label="Shifts assigned" value={String(rows.reduce((n, r) => n + r.shifts, 0))} />
       </div>
       <Card className="mb-6">
@@ -91,10 +94,19 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
       <Card>
         <CardHeader className="flex flex-row items-start justify-between">
           <div>
-            <CardTitle>Payroll reconciliation (last 7 days)</CardTitle>
-            <CardDescription>Worked Time Entries vs scheduled hours, per person per day.</CardDescription>
+            <CardTitle>Payroll reconciliation</CardTitle>
+            <CardDescription>Worked Time Entries vs scheduled hours, per person per day · {pstart} → {pend}</CardDescription>
           </div>
-          <Button asChild variant="outline" size="sm"><Link href={`/api/reports/payroll.csv?start=${addDays(today, -7)}&end=${addDays(today, -1)}`}><Download /> CSV</Link></Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <form className="flex flex-wrap gap-2">
+              <input type="hidden" name="start" value={start} />
+              <input type="hidden" name="end" value={end} />
+              <Input type="date" name="pstart" defaultValue={pstart} aria-label="Payroll from" className="w-40" />
+              <Input type="date" name="pend" defaultValue={pend} aria-label="Payroll to" className="w-40" />
+              <Button variant="outline" size="sm">Apply</Button>
+            </form>
+            <Button asChild variant="outline" size="sm"><Link href={`/api/reports/payroll.csv?start=${pstart}&end=${pend}`}><Download /> CSV</Link></Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

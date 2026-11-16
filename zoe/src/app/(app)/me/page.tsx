@@ -1,6 +1,5 @@
 import { currentInstant } from "@/server/clock";
 import Link from "next/link";
-import { and, eq, gte } from "drizzle-orm";
 import { ChevronLeft, ChevronRight, Phone } from "lucide-react";
 import { addDays, instantToLocalDate } from "@/domain/time";
 import { PageHeader } from "@/components/page-header";
@@ -10,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { prettyDate, shiftColor, timeRange } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { getDb, schema } from "@/server/db";
+import { getDb } from "@/server/db";
+import { myTimeOffFrom } from "@/server/services/timeoff";
+import { myPendingTradeShiftIds } from "@/server/services/trades";
 import { getDepartment, loadSnapshot } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { redirect } from "next/navigation";
@@ -43,10 +44,9 @@ export default async function MySchedulePage({ searchParams }: PageProps<"/me">)
   const names = new Map(snap.ctx.staff.map((s) => [s.id, s.name]));
   const colleagues = (shiftId: string) => snap.ctx.assignments.filter((a) => a.shiftId === shiftId && a.staffId !== me).map((a) => names.get(a.staffId));
 
-  const timeOff = await db.select().from(schema.timeOffRequests).where(and(eq(schema.timeOffRequests.organizationId, actor.organizationId), eq(schema.timeOffRequests.staffMemberId, me), gte(schema.timeOffRequests.endDate, start)));
+  const timeOff = await myTimeOffFrom(db, actor, start);
   const offIn = timeOff.filter((t) => t.startDate <= end && (t.status === "approved" || t.status === "pending"));
-  const trades = await db.select().from(schema.tradeRequests).where(and(eq(schema.tradeRequests.organizationId, actor.organizationId), eq(schema.tradeRequests.requesterId, me)));
-  const pendingTrade = new Set(trades.filter((t) => t.status === "open" || t.status === "accepted").map((t) => t.shiftId));
+  const pendingTrade = await myPendingTradeShiftIds(db, actor);
 
   const upcoming = await loadSnapshot(db, actor.departmentId, today, addDays(today, 30), { publishedOnly: true, pad: 0 });
   const next = upcoming.shifts.find((s) => s.date >= today && upcoming.ctx.assignments.some((a) => a.shiftId === s.id && a.staffId === me));

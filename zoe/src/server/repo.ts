@@ -88,7 +88,7 @@ export async function loadSnapshot(
       shifts: shiftViews,
       assignments: assignmentRows.map((a) => ({ shiftId: a.shiftId, staffId: a.staffMemberId, locked: a.locked })),
       timeOff: off.map((t) => ({ staffId: t.staffMemberId, startDate: t.startDate, endDate: t.endDate })),
-      preferences: prefs.map((p) => ({ staffId: p.staffMemberId, date: p.date, kind: p.kind })),
+      preferences: prefs.map((p) => ({ staffId: p.staffMemberId, date: p.date, kind: p.kind, ...(p.shiftTypeId ? { shiftTypeId: p.shiftTypeId } : {}) })),
       rules: department.settings.rules,
     },
   };

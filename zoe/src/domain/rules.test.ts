@@ -99,6 +99,29 @@ describe("Rule engine", () => {
     expect(v.penalty).toBeGreaterThan(0);
   });
 
+  test("an 'avoid' Preference for one Shift Type only applies to that Shift Type", () => {
+    const c = ctx({
+      rules: rulesOff({ preferences: { enabled: true } }),
+      staff: [staff("ana")],
+      shifts: [shift("call", "2026-01-05", { shiftTypeId: "call", label: "Night Call" }), shift("day", "2026-01-06", { shiftTypeId: "day" }), shift("call2", "2026-01-06", { shiftTypeId: "call", label: "Night Call", startMinute: 19 * 60, endMinute: 31 * 60 })],
+      preferences: [{ staffId: "ana", date: "2026-01-06", kind: "avoid", shiftTypeId: "call" }],
+    });
+    expect(checkAssignment(c, { shiftId: "day", staffId: "ana" })).toEqual([]);
+    const [v] = checkAssignment(c, { shiftId: "call2", staffId: "ana" });
+    expect(v).toMatchObject({ rule: "preference", severity: "soft" });
+    expect(v.message).toContain("Night Call");
+  });
+
+  test("a 'want' Preference is never a Violation", () => {
+    const c = ctx({
+      rules: rulesOff({ preferences: { enabled: true } }),
+      staff: [staff("ana")],
+      shifts: [shift("s1", "2026-01-05")],
+      preferences: [{ staffId: "ana", date: "2026-01-05", kind: "want" }],
+    });
+    expect(checkAssignment(c, { shiftId: "s1", staffId: "ana" })).toEqual([]);
+  });
+
   test("more Assignments than headcount is a Hard Violation", () => {
     const c = ctx({
       staff: [staff("ana"), staff("bo")],

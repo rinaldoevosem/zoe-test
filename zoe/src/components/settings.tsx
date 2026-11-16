@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
-import { saveSettingsAction, saveStaffAction } from "@/app/actions";
+import { toast } from "sonner";
+import { saveSettingsAction, saveShiftTypeAction, saveStaffAction } from "@/app/actions";
 import type { ThresholdRule } from "@/domain/types";
 import { useAction } from "@/components/use-action";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import type { DepartmentSettings } from "@/server/db/schema";
+import type { RejudgedViolation } from "@/server/services/settings";
+import { formatMinute } from "@/domain/time";
+import { shiftColor } from "@/lib/format";
+
+/** After a configuration change, list the published Assignments it broke so the scheduler can fix them. */
+function warnRejudged(d: { newHardViolations: RejudgedViolation[] } | undefined) {
+  const vs = d?.newHardViolations ?? [];
+  if (!vs.length) return;
+  toast.warning(`${vs.length} published Assignment(s) now break a Hard Rule`, {
+    description: vs.slice(0, 6).map((v) => `• ${v.date} ${v.shiftLabel}: ${v.message}`).join("\n") + (vs.length > 6 ? `\n…and ${vs.length - 6} more in the Schedule builder` : ""),
+    duration: 12000,
+  });
+}
 
 const THRESHOLDS: { key: "minRestHours" | "maxConsecutiveDays" | "maxShiftsPerWeek"; label: string; unit: string }[] = [
   { key: "minRestHours", label: "Minimum rest between Shifts", unit: "hours" },
@@ -25,7 +39,7 @@ export function RulesForm({ initial, readOnly }: { initial: DepartmentSettings; 
   const setRule = (key: (typeof THRESHOLDS)[number]["key"], patch: Partial<ThresholdRule>) =>
     setS({ ...s, rules: { ...s.rules, [key]: { ...s.rules[key], ...patch } } });
   return (
-    <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); run(() => saveSettingsAction(s)); }}>
+    <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); run(() => saveSettingsAction(s), warnRejudged); }}>
       <fieldset disabled={readOnly || pending} className="grid gap-3">
         {THRESHOLDS.map(({ key, label, unit }) => {
           const r = s.rules[key];
@@ -99,7 +113,7 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
               onSubmit={(e) => {
                 e.preventDefault();
                 const { tagText, ...rest } = editing;
-                run(() => saveStaffAction({ ...rest, tags: tagText.split(",").map((t) => t.trim()).filter(Boolean) }), () => setEditing(null));
+                run(() => saveStaffAction({ ...rest, tags: tagText.split(",").map((t) => t.trim()).filter(Boolean) }), (d) => { setEditing(null); warnRejudged(d); });
               }}
             >
               <div className="grid gap-2"><Label htmlFor="sn">Name</Label><Input id="sn" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
@@ -109,6 +123,107 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
               </div>
               <div className="grid gap-2"><Label htmlFor="st">Tags (comma separated)</Label><Input id="st" value={editing.tagText} onChange={(e) => setEditing({ ...editing, tagText: e.target.value })} placeholder="cardiac, peds" /></div>
               <div className="grid gap-2"><Label htmlFor="sp">Phone</Label><Input id="sp" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} /></div>
+              <DialogFooter><Button disabled={pending}>Save</Button></DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const COLORS = ["sky", "rose", "amber", "violet", "indigo", "emerald", "teal", "slate"] as const;
+
+export interface ShiftTypeRow {
+  id?: string; name: string; code: string; color: string; startMinute: number; endMinute: number;
+  weekdays: number[]; requiredTags: string[]; headcount: number; weight: number; onCall: boolean; active: boolean;
+}
+
+const toTime = (m: number) => formatMinute(m);
+const fromTime = (t: string) => { const [h, mi] = t.split(":").map(Number); return h * 60 + mi; };
+
+export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; readOnly: boolean }) {
+  const { pending, run } = useAction();
+  const [editing, setEditing] = useState<(ShiftTypeRow & { start: string; end: string; tagText: string }) | null>(null);
+  const open = (t?: ShiftTypeRow) => {
+    const base = t ?? { name: "", code: "", color: "sky", startMinute: 420, endMinute: 1020, weekdays: [1, 2, 3, 4, 5], requiredTags: [], headcount: 1, weight: 1, onCall: false, active: true };
+    setEditing({ ...base, start: toTime(base.startMinute), end: toTime(base.endMinute), tagText: base.requiredTags.join(", ") });
+  };
+  const save = () => {
+    if (!editing) return;
+    const { start, end, tagText, ...rest } = editing;
+    const s = fromTime(start);
+    let e = fromTime(end);
+    if (e <= s) e += 1440; // ends the next morning
+    run(() => saveShiftTypeAction({ ...rest, startMinute: s, endMinute: e, requiredTags: tagText.split(",").map((x) => x.trim()).filter(Boolean) }), () => setEditing(null));
+  };
+  return (
+    <>
+      {!readOnly && <Button variant="outline" size="sm" className="mb-3" onClick={() => open()}><Plus /> Add Shift Type</Button>}
+      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {types.map((t) => (
+          <li key={t.id} className={`flex items-start justify-between gap-2 rounded-md border p-3 ${t.active ? "" : "opacity-60"}`}>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`rounded border px-1.5 py-0.5 text-xs ${shiftColor(t.color)}`}>{t.code}</span>
+                <span className="truncate font-medium">{t.name}</span>
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground tabular-nums">
+                {toTime(t.startMinute)}–{toTime(t.endMinute)}{t.endMinute > 1440 ? " +1" : ""} · {t.weekdays.map((d) => DAYS[d]).join(" ")} · needs {t.headcount} · weight {t.weight}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {t.onCall && <Badge variant="outline">on call</Badge>}
+                {!t.active && <Badge variant="secondary">inactive</Badge>}
+                {t.requiredTags.map((x) => <Badge key={x} variant="secondary">{x}</Badge>)}
+              </div>
+            </div>
+            {!readOnly && <Button size="icon" variant="ghost" aria-label={`Edit ${t.name}`} onClick={() => open(t)}><Pencil /></Button>}
+          </li>
+        ))}
+      </ul>
+      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader><DialogTitle>{editing?.id ? "Edit Shift Type" : "Add Shift Type"}</DialogTitle></DialogHeader>
+          {editing && (
+            <form className="grid gap-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
+              <p className="text-xs text-muted-foreground">Changes apply to Schedule Periods you create from now on. Existing Shifts keep their times.</p>
+              <div className="grid grid-cols-[1fr_7rem] gap-3">
+                <div className="grid gap-2"><Label htmlFor="stn">Name</Label><Input id="stn" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="stc">Code</Label><Input id="stc" required maxLength={6} value={editing.code} onChange={(e) => setEditing({ ...editing, code: e.target.value.toUpperCase() })} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid gap-2"><Label htmlFor="sts">Start</Label><Input id="sts" type="time" required value={editing.start} onChange={(e) => setEditing({ ...editing, start: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="ste">End</Label><Input id="ste" type="time" required value={editing.end} onChange={(e) => setEditing({ ...editing, end: e.target.value })} /></div>
+                <div className="grid gap-2"><Label htmlFor="sth">Needs</Label><Input id="sth" type="number" min={1} max={50} required value={editing.headcount} onChange={(e) => setEditing({ ...editing, headcount: Number(e.target.value) })} /></div>
+                <div className="grid gap-2"><Label htmlFor="stw">Weight</Label><Input id="stw" type="number" step="0.1" min={0.1} max={10} required value={editing.weight} onChange={(e) => setEditing({ ...editing, weight: Number(e.target.value) })} /></div>
+              </div>
+              <p className="-mt-1 text-xs text-muted-foreground">An end time at or before the start means the Shift ends the next day.</p>
+              <fieldset className="grid gap-2">
+                <legend className="mb-1 text-sm font-medium">Weekdays</legend>
+                <div className="flex flex-wrap gap-1">
+                  {DAYS.map((d, i) => {
+                    const on = editing.weekdays.includes(i);
+                    return (
+                      <Button key={d} type="button" size="sm" variant={on ? "default" : "outline"} aria-pressed={on}
+                        onClick={() => setEditing({ ...editing, weekdays: on ? editing.weekdays.filter((x) => x !== i) : [...editing.weekdays, i] })}>{d}</Button>
+                    );
+                  })}
+                </div>
+              </fieldset>
+              <div className="grid gap-2"><Label htmlFor="stt">Required Tags (comma separated)</Label><Input id="stt" value={editing.tagText} onChange={(e) => setEditing({ ...editing, tagText: e.target.value })} placeholder="cardiac, peds" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="stcol">Colour</Label>
+                  <NativeSelect id="stcol" className="w-full" value={editing.color} onChange={(e) => setEditing({ ...editing, color: e.target.value })}>
+                    {COLORS.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}
+                  </NativeSelect>
+                </div>
+                <div className="flex flex-col justify-end gap-2 text-sm">
+                  <label className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={editing.onCall} onChange={(e) => setEditing({ ...editing, onCall: e.target.checked })} /> On-Call</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" className="size-4" checked={editing.active} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> Active</label>
+                </div>
+              </div>
               <DialogFooter><Button disabled={pending}>Save</Button></DialogFooter>
             </form>
           )}

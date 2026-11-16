@@ -43,3 +43,18 @@ export async function requireSession(): Promise<Actor> {
   if (!s) redirect("/signin");
   return s;
 }
+
+/** Demo sign-in choices (ADR-0008), grouped by Organization so tenants never see each other's people in one list. */
+export async function listSignInChoices() {
+  const db = await getDb();
+  const [orgs, users] = await Promise.all([db.select().from(schema.organizations), db.select().from(schema.users)]);
+  const order = { scheduler: 0, admin: 1, staff: 2 } as const;
+  return orgs
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((o) => ({
+      organization: o.name,
+      users: users.filter((u) => u.organizationId === o.id)
+        .sort((a, b) => order[a.permission] - order[b.permission] || a.name.localeCompare(b.name))
+        .map((u) => ({ id: u.id, name: u.name, permission: u.permission })),
+    }));
+}

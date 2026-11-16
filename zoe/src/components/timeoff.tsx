@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { prettyDate } from "@/lib/format";
 
@@ -77,20 +78,38 @@ export function CancelButton({ id }: { id: string }) {
   return <Button size="sm" variant="ghost" disabled={pending} onClick={() => run(() => cancelTimeOffAction(id))}>Cancel</Button>;
 }
 
-export function PreferencesForm({ today, preferences }: { today: string; preferences: { id: string; date: string }[] }) {
+export interface PreferenceView { id: string; date: string; kind: "avoid" | "want"; shiftTypeName: string | null }
+
+export function PreferencesForm({ today, preferences, shiftTypes }: {
+  today: string;
+  preferences: PreferenceView[];
+  shiftTypes: { id: string; name: string }[];
+}) {
   const { pending, run } = useAction();
-  const [day, setDay] = useState(today);
+  const [form, setForm] = useState<{ date: string; kind: "avoid" | "want"; shiftTypeId: string }>({ date: today, kind: "avoid", shiftTypeId: "" });
   return (
     <div className="grid gap-3">
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); run(() => addPreferenceAction(day)); }}>
-        <Input type="date" min={today} value={day} onChange={(e) => setDay(e.target.value)} aria-label="Date you'd rather not work" />
+      <form
+        className="grid gap-2 sm:grid-cols-[auto_1fr_1fr_auto]"
+        onSubmit={(e) => { e.preventDefault(); run(() => addPreferenceAction({ date: form.date, kind: form.kind, shiftTypeId: form.shiftTypeId || undefined })); }}
+      >
+        <NativeSelect aria-label="Preference" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as "avoid" | "want" })}>
+          <NativeSelectOption value="avoid">Rather not work</NativeSelectOption>
+          <NativeSelectOption value="want">Would like to work</NativeSelectOption>
+        </NativeSelect>
+        <Input type="date" min={today} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} aria-label="Date" />
+        <NativeSelect aria-label="Shift Type" className="w-full" value={form.shiftTypeId} onChange={(e) => setForm({ ...form, shiftTypeId: e.target.value })}>
+          <NativeSelectOption value="">Any Shift that day</NativeSelectOption>
+          {shiftTypes.map((t) => <NativeSelectOption key={t.id} value={t.id}>{t.name}</NativeSelectOption>)}
+        </NativeSelect>
         <Button variant="outline" disabled={pending}>Add</Button>
       </form>
       {preferences.length === 0 ? <p className="text-sm text-muted-foreground">No Preferences yet.</p> : (
         <ul className="flex flex-wrap gap-2">
           {preferences.map((p) => (
-            <li key={p.id} className="flex items-center gap-1 rounded-full border py-0.5 pr-1 pl-3 text-sm">
-              {prettyDate(p.date)}
+            <li key={p.id} className={`flex items-center gap-1 rounded-full border py-0.5 pr-1 pl-3 text-sm ${p.kind === "want" ? "border-primary/50 bg-primary/5" : ""}`}>
+              <span className="text-muted-foreground">{p.kind === "want" ? "Want" : "Rather not"}:</span>
+              {p.shiftTypeName ? `${p.shiftTypeName} · ` : ""}{prettyDate(p.date)}
               <Button size="icon" variant="ghost" className="size-6" aria-label={`Remove ${p.date}`} disabled={pending} onClick={() => run(() => removePreferenceAction(p.id))}><X /></Button>
             </li>
           ))}

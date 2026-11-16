@@ -36,7 +36,7 @@ export function navFor(actor: Actor, unread: number): NavItem[] {
     can(actor, "reports:view") && { href: "/reports", label: "Reports", icon: "reports" },
     staff && { href: "/time", label: "Time clock", icon: "time" },
     can(actor, "audit:view") && { href: "/audit", label: "Audit trail", icon: "audit" },
-    staff && { href: "/notifications", label: "Notifications", short: "Inbox", icon: "bell", badge: unread || undefined, mobile: true },
+    { href: "/notifications", label: "Notifications", short: "Inbox", icon: "bell", badge: unread || undefined, mobile: true },
     { href: "/settings", label: "Settings", icon: "settings" },
   ];
   return items.filter((x): x is NavItem => !!x);

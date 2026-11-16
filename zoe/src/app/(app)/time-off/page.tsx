@@ -11,6 +11,7 @@ import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { listPreferences, listTimeOff } from "@/server/services/timeoff";
+import { listShiftTypes } from "@/server/services/settings";
 
 export const metadata = { title: "Time off" };
 
@@ -25,7 +26,10 @@ export default async function TimeOffPage() {
   const mine = actor.staffMemberId ? await listTimeOff(db, actor, "mine") : [];
   const all = decider ? await listTimeOff(db, actor, "department") : [];
   const queue = all.filter((r) => r.request.status === "pending");
-  const prefs = (await listPreferences(db, actor)).filter((p) => p.date >= today);
+  const shiftTypes = (await listShiftTypes(db, actor)).filter((t) => t.active);
+  const typeName = new Map(shiftTypes.map((t) => [t.id, t.name]));
+  const prefs = (await listPreferences(db, actor)).filter((p) => p.date >= today)
+    .map((p) => ({ id: p.id, date: p.date, kind: p.kind, shiftTypeName: p.shiftTypeId ? typeName.get(p.shiftTypeId) ?? "Retired Shift Type" : null }));
 
   return (
     <>
@@ -47,9 +51,9 @@ export default async function TimeOffPage() {
           <Card>
             <CardHeader>
               <CardTitle>Preferences</CardTitle>
-              <CardDescription>Dates you&apos;d rather not work. Auto-fill avoids them when it can; it never blocks the schedule.</CardDescription>
+              <CardDescription>Dates or Shift Types you&apos;d rather not work, or would like to. Auto-fill uses them to break ties and never lets them override fairness or block the schedule.</CardDescription>
             </CardHeader>
-            <CardContent><PreferencesForm today={today} preferences={prefs.map((p) => ({ id: p.id, date: p.date }))} /></CardContent>
+            <CardContent><PreferencesForm today={today} preferences={prefs} shiftTypes={shiftTypes.map((t) => ({ id: t.id, name: t.name }))} /></CardContent>
           </Card>
         )}
         {decider && (
