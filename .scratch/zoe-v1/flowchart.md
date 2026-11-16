@@ -1,0 +1,146 @@
+# Zoe v1 — flowcharts
+
+Part of the [Zoe v1 map](./map.md). Regenerate when tickets change.
+
+## Decision map (wayfinder)
+
+Solid arrows are **Blocked by** edges. Colour = ticket type: teal grilling (HITL), blue research (AFK), amber prototype (HITL), violet task.
+
+```mermaid
+%%{init: {"flowchart": {"useMaxWidth": false, "nodeSpacing": 28, "rankSpacing": 56}} }%%
+flowchart LR
+  subgraph KNOWN["Decided so far"]
+    D1["Incumbent research<br/>(capabilities + pains)"]:::done
+    D2["v0 prototype spec<br/>built & tested"]:::done
+    D3["ADRs 0001–0008<br/>provisional"]:::prov
+  end
+  subgraph FRONTIER["Frontier: takeable now"]
+    T01["01 · Destination & pilot<br/><i>grill</i>"]:::grilling
+    T02["02 · Confirm provisional ADRs<br/><i>grill</i>"]:::grilling
+    T03["03 · Where Zoe lives<br/><i>grill</i>"]:::grilling
+    T04["04 · Business model & licensing<br/><i>grill</i>"]:::grilling
+    T05["05 · Compliance: HIPAA / SOC 2<br/><i>research</i>"]:::research
+    T06["06 · Hospital SSO & IdPs<br/><i>research</i>"]:::research
+    T07["07 · Epic / paging paths<br/><i>research</i>"]:::research
+    T08["08 · Payroll formats<br/><i>research</i>"]:::research
+    T09["09 · Solver options<br/><i>research</i>"]:::research
+  end
+  subgraph FOG["Blocked"]
+    T10["10 · Real schedule sample<br/><i>task</i>"]:::task
+    T11["11 · Rule catalogue<br/><i>grill</i>"]:::grilling
+    T12["12 · Rule authoring UX<br/><i>prototype</i>"]:::prototype
+    T13["13 · Auto-fill strategy<br/><i>grill</i>"]:::grilling
+    T14["14 · Auth, tenancy, residency<br/><i>grill</i>"]:::grilling
+    T15["15 · Notification channels<br/><i>grill</i>"]:::grilling
+    T16["16 · Mobile: PWA vs native<br/><i>prototype</i>"]:::prototype
+    T17["17 · Integration scope<br/><i>grill</i>"]:::grilling
+    T18["18 · Nursing scope<br/><i>grill</i>"]:::grilling
+    T19["19 · Credentialing scope<br/><i>grill</i>"]:::grilling
+    T20["20 · Migration & onboarding<br/><i>grill</i>"]:::grilling
+  end
+  T21["21 · Lock the v1 spec<br/><i>grill</i>"]:::grilling
+  DEST(["Destination<br/>pilot-ready v1 spec"]):::dest
+  D3 -.reopened by.-> T02
+  D1 -.informs.-> T01
+  T01 --> T10
+  T01 --> T11
+  T10 --> T11
+  T11 --> T12
+  T09 --> T13
+  T10 --> T13
+  T11 --> T13
+  T05 --> T14
+  T06 --> T14
+  T03 --> T14
+  T01 --> T15
+  T04 --> T15
+  T15 --> T16
+  T02 --> T16
+  T07 --> T17
+  T08 --> T17
+  T01 --> T17
+  T01 --> T18
+  T01 --> T19
+  T10 --> T20
+  T01 --> T20
+  T02 --> T21
+  T03 --> T21
+  T04 --> T21
+  T11 --> T21
+  T12 --> T21
+  T13 --> T21
+  T14 --> T21
+  T15 --> T21
+  T16 --> T21
+  T17 --> T21
+  T18 --> T21
+  T19 --> T21
+  T20 --> T21
+  T21 ==> DEST
+  classDef grilling fill:#d7ece9,stroke:#0f766e,color:#0b3b37
+  classDef research fill:#dfe7f6,stroke:#3b5b9a,color:#1d2d4f
+  classDef prototype fill:#f3e3cf,stroke:#a3601b,color:#4a2b0b
+  classDef task fill:#ece2f3,stroke:#7a4a9a,color:#3a2050
+  classDef done fill:#e4e7ea,stroke:#5b6670,color:#2a3036
+  classDef prov fill:#fbf0c9,stroke:#a8841a,color:#43350a,stroke-dasharray:4 3
+  classDef dest fill:#0f766e,stroke:#0b4f4a,color:#ffffff
+```
+
+## Features & specs → decisions
+
+What v0 already built, what remains in the v0 backlog, and which map decisions will reshape each before v1.
+
+```mermaid
+%%{init: {"flowchart": {"useMaxWidth": false, "nodeSpacing": 28, "rankSpacing": 56}} }%%
+flowchart LR
+  SPEC0["v0 spec<br/>40 stories"]:::done
+  subgraph BUILT["Built in v0 (zoe/)"]
+    F1["Rule engine<br/>Hard / Soft Violations"]:::done
+    F2["Explainable Auto-fill<br/>+ Load fairness"]:::done
+    F3["Schedule builder<br/>assign · lock · publish"]:::done
+    F4["My schedule (PWA)"]:::done
+    F5["Time off + Request Limit<br/>+ Preferences"]:::done
+    F6["Trades: swap · giveaway · pickup<br/>auto-approval"]:::done
+    F7["Who's On Call + JSON"]:::done
+    F8["Calendar Feed (ICS)"]:::done
+    F9["Reports · payroll CSV · time clock"]:::done
+    F10["Audit trail · notifications<br/>staff & rule settings"]:::done
+  end
+  subgraph BACKLOG["v0 backlog tickets"]
+    B13["Prod auth + RLS"]:::backlog
+    B14["Integration adapters"]:::backlog
+    B15["Enterprise modules"]:::backlog
+    B16["Review follow-ups<br/>Shift Type CRUD …"]:::backlog
+  end
+  subgraph DECIDE["Decisions that reshape them"]
+    X11["11 Rule catalogue"]:::grilling
+    X13["13 Auto-fill strategy"]:::grilling
+    X14["14 Auth, tenancy, residency"]:::grilling
+    X15["15 Notification channels"]:::grilling
+    X16["16 Mobile delivery"]:::prototype
+    X17["17 Integration scope"]:::grilling
+    X18["18 Nursing scope"]:::grilling
+    X19["19 Credentialing scope"]:::grilling
+    X12["12 Rule authoring UX"]:::prototype
+  end
+  V1(["v1 spec → /to-tickets → build"]):::dest
+  SPEC0 --> F1 & F2 & F3 & F4 & F5 & F6 & F7 & F8 & F9 & F10
+  F1 -.-> X11
+  F2 -.-> X13
+  F10 -.-> X12
+  F4 -.-> X16
+  F10 -.-> X15
+  B13 -.-> X14
+  B14 -.-> X17
+  B15 -.-> X18 & X19
+  B16 -.-> X11
+  X11 & X12 & X13 & X14 & X15 & X16 & X17 & X18 & X19 --> V1
+  classDef grilling fill:#d7ece9,stroke:#0f766e,color:#0b3b37
+  classDef research fill:#dfe7f6,stroke:#3b5b9a,color:#1d2d4f
+  classDef prototype fill:#f3e3cf,stroke:#a3601b,color:#4a2b0b
+  classDef task fill:#ece2f3,stroke:#7a4a9a,color:#3a2050
+  classDef done fill:#e4e7ea,stroke:#5b6670,color:#2a3036
+  classDef prov fill:#fbf0c9,stroke:#a8841a,color:#43350a,stroke-dasharray:4 3
+  classDef dest fill:#0f766e,stroke:#0b4f4a,color:#ffffff
+  classDef backlog fill:#f6f1e7,stroke:#8a7a5a,color:#3d3523,stroke-dasharray:4 3
+```

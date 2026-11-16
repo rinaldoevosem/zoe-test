@@ -10,6 +10,7 @@ They drive the development workflow of **Zoe** (see `/CLAUDE.md`):
 | Setup (once) | `/setup-matt-pocock-skills` | `docs/agents/*`, `## Agent skills` in `CLAUDE.md` |
 | Research | `research` | `docs/research/*.md` |
 | Alignment | `/grill-with-docs` → `grilling` + `domain-modeling` | `GLOSSARY.md`, `docs/adr/*` |
+| Roadmap (multi-session) | `/wayfinder` → map of decision tickets | `.scratch/<effort>/map.md`, `.scratch/<effort>/issues/*` |
 | Spec | `/to-spec` | `.scratch/<feature>/spec.md` |
 | Tickets | `/to-tickets` | `.scratch/<feature>/issues/NN-*.md` |
 | Build | `/implement` → `tdd` at agreed seams, `codebase-design` | `zoe/src/**` + tests |
