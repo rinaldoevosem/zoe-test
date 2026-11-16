@@ -10,7 +10,7 @@ import { listNotifications } from "@/server/services/notifications";
 
 export const metadata = { title: "Notifications" };
 
-const CATEGORY = { urgent: "destructive", trade: "default", schedule: "secondary", request: "outline" } as const;
+const CATEGORY = { urgent: "destructive", trade: "default", schedule: "secondary", request: "outline", reminder: "outline" } as const;
 
 export default async function NotificationsPage() {
   const actor = await requireSession();

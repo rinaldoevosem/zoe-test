@@ -91,3 +91,9 @@ export function daysBetween(from: LocalDate, to: LocalDate): number {
   const ms = (d: LocalDate) => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
   return Math.round((ms(to) - ms(from)) / 86_400_000);
 }
+
+/** Minutes after local midnight of an instant in a time zone. */
+export function instantToLocalMinute(instant: number, timeZone: string): number {
+  const t = new TZDate(instant, timeZone);
+  return t.getHours() * 60 + t.getMinutes();
+}

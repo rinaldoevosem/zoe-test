@@ -53,6 +53,12 @@ export const users = pgTable("users", {
   permission: text("permission", { enum: ["staff", "scheduler", "admin"] }).notNull(),
   staffMemberId: text("staff_member_id").references(() => staffMembers.id),
   departmentId: text("department_id").notNull().references(() => departments.id),
+  /** Notification channels: email always allowed, text message for Urgent ones; Quiet Hours in local minutes. */
+  notifyEmail: boolean("notify_email").notNull().default(true),
+  notifySms: boolean("notify_sms").notNull().default(true),
+  mobile: text("mobile"),
+  quietStart: integer("quiet_start"),
+  quietEnd: integer("quiet_end"),
   createdAt: createdAt(),
 }, (t) => [uniqueIndex("users_email").on(t.email)]);
 
@@ -166,13 +172,35 @@ export const notifications = pgTable("notifications", {
   /** A Notification goes to a Staff Member, or to a User who works no Shifts (e.g. a scheduler). */
   staffMemberId: text("staff_member_id").references(() => staffMembers.id),
   userId: text("user_id").references(() => users.id),
-  category: text("category", { enum: ["urgent", "trade", "schedule", "request"] }).notNull(),
+  category: text("category", { enum: ["urgent", "trade", "schedule", "request", "reminder"] }).notNull(),
   title: text("title").notNull(),
   body: text("body").notNull(),
   href: text("href"),
+  /** Set by jobs that must not repeat themselves (a reminder or alert is sent once per key). */
+  dedupeKey: text("dedupe_key"),
   readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: createdAt(),
-}, (t) => [index("notifications_staff").on(t.staffMemberId, t.createdAt), index("notifications_user").on(t.userId, t.createdAt)]);
+}, (t) => [
+  index("notifications_staff").on(t.staffMemberId, t.createdAt),
+  index("notifications_user").on(t.userId, t.createdAt),
+  index("notifications_dedupe").on(t.organizationId, t.dedupeKey),
+]);
+
+/** One attempt to send a Notification by email or text message, with its outcome (GLOSSARY: Delivery). */
+export const deliveries = pgTable("deliveries", {
+  id: id(),
+  organizationId: org(),
+  notificationId: text("notification_id").notNull().references(() => notifications.id),
+  channel: text("channel", { enum: ["email", "sms"] }).notNull(),
+  to: text("to").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  status: text("status", { enum: ["pending", "sent", "skipped", "failed"] }).notNull().default("pending"),
+  sendAfter: timestamp("send_after", { withTimezone: true }).notNull(),
+  detail: text("detail"),
+  sentAt: timestamp("sent_at", { withTimezone: true }),
+  createdAt: createdAt(),
+}, (t) => [index("deliveries_due").on(t.status, t.sendAfter), index("deliveries_org").on(t.organizationId, t.createdAt)]);
 
 export const calendarTokens = pgTable("calendar_tokens", {
   id: id(),

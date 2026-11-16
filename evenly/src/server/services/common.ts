@@ -1,6 +1,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { can, type Action, type PermissionLevel } from "@/domain/permissions";
 import type { Violation } from "@/domain/types";
+import { currentInstant } from "../clock";
 import { schema, type DB } from "../db";
 
 export interface Actor {
@@ -35,28 +36,51 @@ export async function audit(db: DB, actor: Actor, action: string, summary: strin
   });
 }
 
-export async function notify(
-  db: DB,
-  organizationId: string,
-  staffMemberIds: string[],
-  n: { category: "urgent" | "trade" | "schedule" | "request"; title: string; body: string; href?: string },
-) {
+export interface NotificationInput {
+  category: "urgent" | "trade" | "schedule" | "request" | "reminder";
+  title: string;
+  body: string;
+  href?: string;
+  /** Jobs pass a key so the same reminder or alert is never sent twice. */
+  dedupeKey?: string;
+}
+
+async function alreadySent(db: DB, organizationId: string, dedupeKey?: string) {
+  if (!dedupeKey) return false;
+  const [hit] = await db.select({ id: schema.notifications.id }).from(schema.notifications)
+    .where(and(eq(schema.notifications.organizationId, organizationId), eq(schema.notifications.dedupeKey, dedupeKey))).limit(1);
+  return !!hit;
+}
+
+/** In-app Notifications are written here; email and text Deliveries are queued and the due ones sent. */
+async function deliver(db: DB, rows: (typeof schema.notifications.$inferSelect)[]) {
+  const { queueDeliveries, dispatchDue } = await import("./delivery");
+  const now = currentInstant();
+  await queueDeliveries(db, rows, now);
+  await dispatchDue(db, now);
+}
+
+export async function notify(db: DB, organizationId: string, staffMemberIds: string[], n: NotificationInput) {
   const unique = [...new Set(staffMemberIds)];
-  if (!unique.length) return;
-  await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...n })));
+  if (!unique.length || (await alreadySent(db, organizationId, n.dedupeKey))) return 0;
+  const rows = await db.insert(schema.notifications).values(unique.map((staffMemberId) => ({ organizationId, staffMemberId, ...n }))).returning();
+  await deliver(db, rows);
+  return rows.length;
 }
 
 /** Notifies every User in the Department who edits the schedule and approves trades (schedulers and admins). */
 export async function notifySchedulers(
   db: DB,
   actor: Pick<Actor, "organizationId" | "departmentId">,
-  n: { category: "urgent" | "trade" | "schedule" | "request"; title: string; body: string; href?: string },
+  n: NotificationInput,
 ) {
   const approvers = (await db.select().from(schema.users)
     .where(and(eq(schema.users.organizationId, actor.organizationId), eq(schema.users.departmentId, actor.departmentId))))
     .filter((u) => can(u, "schedule:edit"));
-  if (!approvers.length) return;
-  await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...n })));
+  if (!approvers.length || (await alreadySent(db, actor.organizationId, n.dedupeKey))) return 0;
+  const rows = await db.insert(schema.notifications).values(approvers.map((u) => ({ organizationId: actor.organizationId, userId: u.id, ...n }))).returning();
+  await deliver(db, rows);
+  return rows.length;
 }
 
 export async function staffNames(db: DB, ids: string[]): Promise<Map<string, string>> {

@@ -182,3 +182,7 @@ export async function saveStaffAction(input: unknown) {
 export async function saveShiftTypeAction(input: unknown) {
   return run((db, a) => settings.saveShiftType(db, a, input), savedMessage("Shift Type"));
 }
+
+export async function saveChannelSettingsAction(input: unknown) {
+  return run((db, a) => inbox.saveChannelSettings(db, a, input), () => "Notification settings saved");
+}

@@ -11,6 +11,9 @@ import { getDb } from "@/server/db";
 import { getDepartment } from "@/server/repo";
 import { requireSession } from "@/server/session";
 import { hasCalendarToken } from "@/server/services/calendar";
+import { recentDeliveries } from "@/server/services/delivery";
+import { getChannelSettings } from "@/server/services/notifications";
+import { NotificationSettings } from "@/components/notification-settings";
 import { listShiftTypes, listStaff } from "@/server/services/settings";
 
 export const metadata = { title: "Settings" };
@@ -20,7 +23,10 @@ export default async function SettingsPage() {
   const db = await getDb();
   const dept = await getDepartment(db, actor.departmentId);
   const admin = can(actor, "config:edit");
-  const [staff, types, token] = await Promise.all([listStaff(db, actor), listShiftTypes(db, actor), hasCalendarToken(db, actor)]);
+  const [staff, types, token, channels, deliveries] = await Promise.all([
+    listStaff(db, actor), listShiftTypes(db, actor), hasCalendarToken(db, actor), getChannelSettings(db, actor),
+    admin ? recentDeliveries(db, actor.organizationId, 15) : Promise.resolve([]),
+  ]);
   const today = instantToLocalDate(currentInstant(), dept.timeZone);
   const names = new Map(staff.map((s) => [s.id, s.name]));
   const expiring = expiringCertifications(staff.map((s) => ({ ...s, tagExpiry: s.tagExpiry })), today, 60);
@@ -38,6 +44,13 @@ export default async function SettingsPage() {
             <CardContent><CalendarFeed hasToken={token} /></CardContent>
           </Card>
         )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>Everything arrives in your Evenly inbox. Choose what also reaches you by email and text.</CardDescription>
+          </CardHeader>
+          <CardContent><NotificationSettings initial={channels} /></CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Rules & policies</CardTitle>
@@ -74,6 +87,28 @@ export default async function SettingsPage() {
             <StaffEditor today={today} staff={staff.map((s) => ({ id: s.id, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags: s.tags, tagExpiry: s.tagExpiry, phone: s.phone ?? "" }))} readOnly={!admin} />
           </CardContent>
         </Card>
+        {admin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Deliveries</CardTitle>
+              <CardDescription>Every email and text message Evenly tried to send, with its outcome.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {deliveries.length === 0 ? <p className="text-sm text-muted-foreground">Nothing sent yet.</p> : (
+                <ul className="grid gap-1.5 text-sm">
+                  {deliveries.map((d) => (
+                    <li key={d.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b pb-1.5 last:border-0">
+                      <span className="min-w-0"><span className="font-medium">{d.channel === "sms" ? "Text" : "Email"}</span> to {d.to}: {d.subject}</span>
+                      <Badge variant={d.status === "sent" ? "secondary" : d.status === "failed" ? "destructive" : "outline"} title={d.detail ?? undefined}>
+                        {d.status === "pending" ? `held until ${d.sendAfter.toISOString().slice(11, 16)} UTC` : d.status}{d.status === "skipped" && d.detail ? `: ${d.detail.toLowerCase()}` : ""}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle>Shift Types</CardTitle>
