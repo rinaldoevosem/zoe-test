@@ -1,7 +1,7 @@
 # 08: Research: payroll & HCM export formats
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: None (can start immediately)
 Map: [Zoe v1 map](../map.md)
 

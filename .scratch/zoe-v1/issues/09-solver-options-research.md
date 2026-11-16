@@ -1,7 +1,7 @@
 # 09: Research: constraint solvers for Auto-fill at scale
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: None (can start immediately)
 Map: [Zoe v1 map](../map.md)
 

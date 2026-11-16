@@ -1,7 +1,7 @@
 # 05: Research: compliance for scheduling data (HIPAA, SOC 2, BAAs)
 
 Type: research
-Status: open
+Status: claimed
 Blocked by: None (can start immediately)
 Map: [Zoe v1 map](../map.md)
 
