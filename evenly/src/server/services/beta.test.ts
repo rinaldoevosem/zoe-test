@@ -7,7 +7,7 @@ import { seed } from "../db/seed";
 import { getDepartment, loadSnapshot } from "../repo";
 import type { Actor } from "./common";
 import { onCallRows, whosOnCall } from "./oncall";
-import { createPeriod, runAutofill } from "./schedule";
+import { assignBlock, createPeriod, runAutofill } from "./schedule";
 import { saveDepartmentSettings, saveShiftType, saveStaffMember } from "./settings";
 
 // Hospital medicine pilot: the demo Department, Blocks and Auto-publish (.scratch/evenly-beta).
@@ -119,5 +119,30 @@ describe("Certifications", () => {
     const dated = rows.filter((r) => r.tagExpiry.procedures).map((r) => [r.name, r.tagExpiry.procedures]).sort();
     expect(dated).toContainEqual(["Dr. Sofia Reyes", "2026-11-06"]);
     expect(dated).toContainEqual(["Dr. Daniel Okafor", "2026-12-06"]);
+  });
+});
+
+describe("Assign a Block", () => {
+  const firstDecDayTeam = async () => {
+    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-01", { pad: 0 });
+    return snap.shifts.find((s) => s.label === "Day Team" && s.date === "2026-12-01")!;
+  };
+
+  test("assigns one person to the same Shift Type for consecutive days", async () => {
+    const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
+    const r = await assignBlock(db, scheduler, (await firstDecDayTeam()).id, leo.id, 7);
+    expect(r.added).toBe(7);
+    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-01", "2026-12-07", { pad: 0 });
+    const days = snap.shifts.filter((s) => s.label === "Day Team" && snap.ctx.assignments.some((a) => a.shiftId === s.id && a.staffId === leo.id)).map((s) => s.date);
+    expect(days).toEqual(["2026-12-01", "2026-12-02", "2026-12-03", "2026-12-04", "2026-12-05", "2026-12-06", "2026-12-07"]);
+  });
+
+  test("refuses the whole Block when one day breaks a Hard Rule, naming the day", async () => {
+    const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
+    const snap = await loadSnapshot(db, scheduler.departmentId, "2026-12-05", "2026-12-05", { pad: 0 });
+    const dec5Admit = snap.shifts.find((s) => s.label === "Admitter" && s.date === "2026-12-05")!;
+    await expect(assignBlock(db, scheduler, dec5Admit.id, leo.id, 3)).rejects.toThrow(/2026-12-05 breaks a Hard Rule/);
+    const after = await loadSnapshot(db, scheduler.departmentId, "2026-12-05", "2026-12-07", { pad: 0 });
+    expect(after.ctx.assignments.filter((a) => a.staffId === leo.id)).toHaveLength(3);
   });
 });

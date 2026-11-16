@@ -59,6 +59,13 @@ export async function assignAction(shiftId: string, staffId: string) {
   return run((db, a) => schedule.assign(db, a, id.parse(shiftId), id.parse(staffId)), (r) => (r.warnings.length ? `Assigned with ${r.warnings.length} warning(s)` : "Assigned"));
 }
 
+export async function assignBlockAction(shiftId: string, staffId: string, days: number) {
+  return run(
+    (db, a) => schedule.assignBlock(db, a, id.parse(shiftId), id.parse(staffId), z.number().int().min(1).max(31).parse(days)),
+    (r) => `Assigned a ${r.added}-day Block${r.warnings.length ? ` with ${r.warnings.length} warning(s)` : ""}`,
+  );
+}
+
 export async function unassignAction(assignmentId: string) {
   return run((db, a) => schedule.unassign(db, a, id.parse(assignmentId)), () => "Removed");
 }

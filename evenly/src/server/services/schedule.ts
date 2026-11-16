@@ -107,6 +107,45 @@ export async function assign(db: DB, actor: Actor, shiftId: string, staffId: str
   return { warnings: vs };
 }
 
+/**
+ * Assign a Block: one Staff Member on the same Shift Type for `days` consecutive days, starting with `shiftId`.
+ * All or nothing: if any day would break a Hard Rule (judged cumulatively, ADR-0002), nothing is assigned.
+ */
+export async function assignBlock(db: DB, actor: Actor, shiftId: string, staffId: string, days: number) {
+  require(actor, "schedule:edit");
+  if (!Number.isInteger(days) || days < 1 || days > 31) throw new DomainError("A Block is 1 to 31 days");
+  const { shift, type } = await shiftInDepartment(db, actor, shiftId);
+  const last = addDays(shift.date, days - 1);
+  const snap = await loadSnapshot(db, actor.departmentId, shift.date, last);
+  if (!snap.ctx.staff.some((m) => m.id === staffId)) throw new DomainError("Staff Member not found in this Department");
+  const dates = eachDate(shift.date, last);
+  const ctx = { ...snap.ctx, assignments: [...snap.ctx.assignments] };
+  const toAdd: { shiftId: string; date: string }[] = [];
+  const warnings: Violation[] = [];
+  for (const date of dates) {
+    const target = snap.ctx.shifts.find((s) => s.shiftTypeId === shift.shiftTypeId && s.date === date);
+    if (!target) throw new DomainError(`No ${type.name} Shift on ${date}, so the Block can't run through it`);
+    if (ctx.assignments.some((a) => a.shiftId === target.id && a.staffId === staffId)) continue;
+    const vs = checkAssignment(ctx, { shiftId: target.id, staffId });
+    const hard = vs.find((v) => v.severity === "hard");
+    if (hard) throw new DomainError(`Block not assigned: ${date} breaks a Hard Rule (${hard.message})`, vs);
+    ctx.assignments.push({ shiftId: target.id, staffId });
+    toAdd.push({ shiftId: target.id, date });
+    warnings.push(...vs);
+  }
+  if (!toAdd.length) return { added: 0, warnings };
+  await db.insert(assignments).values(toAdd.map((t) => ({ organizationId: actor.organizationId, shiftId: t.shiftId, staffMemberId: staffId, source: "manual" as const })));
+  const names = await staffNames(db, [staffId]);
+  await audit(db, actor, "assignment.block", `Assigned ${names.get(staffId)} to ${type.name} for ${toAdd.length} days from ${toAdd[0].date}`, { staffId, shiftIds: toAdd.map((t) => t.shiftId), warnings: warnings.map((v) => v.message) });
+  const publishedPeriods = await db.select({ id: schedulePeriods.id }).from(schedulePeriods)
+    .where(and(eq(schedulePeriods.departmentId, actor.departmentId), eq(schedulePeriods.status, "published")));
+  const published = new Set(publishedPeriods.map((r) => r.id));
+  if (snap.shifts.some((s) => toAdd.some((t) => t.shiftId === s.id) && published.has(s.periodId))) {
+    await notify(db, actor.organizationId, [staffId], { category: "schedule", title: "You were given a Block", body: `${type.name}, ${toAdd[0].date} to ${toAdd.at(-1)!.date}`, href: "/me" });
+  }
+  return { added: toAdd.length, warnings };
+}
+
 export async function unassign(db: DB, actor: Actor, assignmentId: string) {
   require(actor, "schedule:edit");
   const [a] = await db.select().from(assignments).where(and(eq(assignments.id, assignmentId), eq(assignments.organizationId, actor.organizationId)));

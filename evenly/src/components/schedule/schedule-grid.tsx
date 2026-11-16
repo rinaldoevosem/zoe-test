@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Lock, LockOpen, Phone, Plus, Sparkles, X } from "lucide-react";
-import { assignAction, candidatesAction, lockAction, unassignAction } from "@/app/actions";
+import { assignAction, assignBlockAction, candidatesAction, lockAction, unassignAction } from "@/app/actions";
 import type { Violation } from "@/domain/types";
 import { useAction } from "@/components/use-action";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +116,7 @@ function ShiftPanel({ cell }: { cell: GridCell }) {
   const { shift, assignees } = cell;
   const { pending, run } = useAction();
   const [candidates, setCandidates] = useState<CandidateView[] | null>(null);
+  const [blockDays, setBlockDays] = useState(1);
   const [showBlocked, setShowBlocked] = useState(false);
   const gap = shift.headcount - assignees.length;
 
@@ -169,6 +170,12 @@ function ShiftPanel({ cell }: { cell: GridCell }) {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-medium">{gap > 0 ? `Eligible to assign (${gap} needed)` : "Full — remove someone to assign a replacement"}</h3>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground" title="Assign the same person to this Shift Type for several days in a row (a Block)">
+              Days in a row
+              <input type="number" min={1} max={31} value={blockDays} data-testid="block-days"
+                onChange={(e) => setBlockDays(Math.max(1, Math.min(31, Number(e.target.value) || 1)))}
+                className="h-7 w-14 rounded-md border bg-background px-2 text-sm text-foreground" />
+            </label>
             {blockedCount > 0 && (
               <Button variant="link" size="sm" className="h-auto p-0" onClick={() => setShowBlocked(!showBlocked)}>
                 {showBlocked ? "Hide" : "Show"} {blockedCount} blocked
@@ -187,8 +194,8 @@ function ShiftPanel({ cell }: { cell: GridCell }) {
                       <div className="text-xs text-muted-foreground">{c.clinicalRole} · FTE {c.fte} · Load {c.load}</div>
                     </div>
                     <Button size="sm" variant={c.blocked ? "outline" : c.violations.length ? "secondary" : "default"} disabled={pending || c.blocked || gap <= 0} data-testid={`assign-${c.staffId}`}
-                      onClick={() => run(() => assignAction(shift.id, c.staffId))}>
-                      Assign
+                      onClick={() => run(() => (blockDays > 1 ? assignBlockAction(shift.id, c.staffId, blockDays) : assignAction(shift.id, c.staffId)))}>
+                      {blockDays > 1 ? `Assign ${blockDays} days` : "Assign"}
                     </Button>
                   </div>
                   <ViolationList violations={c.violations} />
