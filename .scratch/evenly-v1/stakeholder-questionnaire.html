@@ -120,6 +120,21 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .tally-row .track i { display: block; height: 100%; background: var(--accent); }
 .tally-row .n { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
 .notes-list { margin: 0; padding-left: 18px; color: var(--muted); font-size: 0.9rem; display: grid; gap: 4px; }
+.summary { display: grid; gap: 10px; }
+.summary-head { display: grid; gap: 2px; }
+.summary-head p { color: var(--muted); font-size: 0.92rem; }
+.sum-row { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.sum-rank { font: 700 1rem var(--font-display); color: var(--muted); font-variant-numeric: tabular-nums; }
+.sum-q { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.sum-votes { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sum-pick { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; color: var(--muted); font-size: 0.92rem; min-width: 0; overflow-wrap: anywhere; }
+.sum-row .track { grid-column: 2 / 4; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.sum-row .track i { display: block; height: 100%; background: var(--accent); }
+.pill { font: 600 0.72rem var(--font-body); text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.pill.clear { background: var(--accent-soft); color: var(--accent); }
+.pill.split { background: var(--suggest-soft); color: var(--suggest); }
+.pill.tied { background: var(--warn-soft); color: var(--warn); }
+.tally-row.lead .lbl, .tally-row.lead .n, .tally-row.lead strong { color: var(--accent); font-weight: 700; }
 .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 18px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -190,6 +205,7 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   <div id="view-results" class="results" hidden>
     <h2>All responses</h2>
     <p class="status" id="results-status">Loading responses…</p>
+    <div id="summary" class="summary"></div>
     <div class="people" id="people"></div>
     <div id="tallies" class="results"></div>
   </div>
@@ -484,12 +500,52 @@ function startResults() {
     renderResults(snap.docs.map(d => d.data()));
   }, err => { clearTimeout(timer); $("results-status").textContent = "Responses stopped updating (" + err.code + "). Reopen the page to see the latest."; });
 }
+function countsFor(q, rows) {
+  return [...q.opts.map((o, k) => ({ l: LETTERS[k], t: o.t })), UNSURE]
+    .map(c => ({ ...c, n: rows.filter(r => r.answers && r.answers[q.key] === c.l).length }));
+}
+// Rank questions by how many people chose their leading answer ("Not sure" never leads).
+function renderSummary(rows, root) {
+  const stats = ALL.map((q, i) => {
+    const cs = countsFor(q, rows);
+    const answered = cs.reduce((s, c) => s + c.n, 0);
+    const top = Math.max(0, ...cs.filter(c => c.l !== "?").map(c => c.n));
+    const leaders = top ? cs.filter(c => c.l !== "?" && c.n === top) : [];
+    return { q, i, answered, top, leaders };
+  }).sort((a, b) => b.top - a.top || b.answered - a.answered || a.i - b.i);
+  const head = document.createElement("div"); head.className = "summary-head";
+  const h = document.createElement("h2"); h.textContent = "Top picks";
+  const p = document.createElement("p"); p.textContent = "Questions ranked by how many people chose the leading answer. Clear favorite means at least 60% of those who answered agree.";
+  head.append(h, p); root.append(head);
+  stats.forEach((s, rank) => {
+    const row = document.createElement("div"); row.className = "sum-row";
+    const r = document.createElement("span"); r.className = "sum-rank"; r.textContent = rank + 1;
+    const q = document.createElement("span"); q.className = "sum-q"; q.textContent = (s.i + 1) + ". " + s.q.title;
+    const v = document.createElement("span"); v.className = "sum-votes"; v.textContent = s.top + " of " + s.answered;
+    const pick = document.createElement("div"); pick.className = "sum-pick";
+    const pill = document.createElement("span");
+    if (!s.leaders.length) { pill.className = "pill split"; pill.textContent = s.answered ? "Not sure" : "No answers"; }
+    else if (s.leaders.length > 1) { pill.className = "pill tied"; pill.textContent = "Tied"; }
+    else if (s.top / s.answered >= 0.6) { pill.className = "pill clear"; pill.textContent = "Clear favorite"; }
+    else { pill.className = "pill split"; pill.textContent = "Split"; }
+    const txt = document.createElement("span");
+    txt.textContent = s.leaders.length ? s.leaders.map(c => c.l + ": " + c.t + (c.l === "A" ? " (suggested)" : "")).join("  ·  ") : "Nobody has picked an option yet";
+    pick.append(pill, txt);
+    const tr = document.createElement("div"); tr.className = "track";
+    const bar = document.createElement("i"); bar.style.width = (s.answered ? s.top / rows.length * 100 : 0) + "%"; tr.append(bar);
+    row.append(r, q, v, pick, tr); root.append(row);
+  });
+  const h2 = document.createElement("h2"); h2.textContent = "Every question in detail"; h2.style.paddingTop = "8px";
+  root.append(h2);
+}
 function renderResults(rows) {
   rows = rows.slice().sort((a, b) => String(b.savedAt || "").localeCompare(String(a.savedAt || "")));
   $("resp-count").textContent = "(" + rows.length + ")";
   $("results-status").textContent = rows.length ? rows.length + " response" + (rows.length === 1 ? "" : "s") + " so far. Updates live." : "";
   const people = $("people"); people.replaceChildren();
   const tallies = $("tallies"); tallies.replaceChildren();
+  const summary = $("summary"); summary.replaceChildren();
+  if (rows.length) renderSummary(rows, summary);
   if (!rows.length) {
     const e = document.createElement("p"); e.className = "empty";
     e.textContent = "No responses yet. Share this page with your client's stakeholders; each person's saved answers appear here.";
@@ -506,10 +562,11 @@ function renderResults(rows) {
     const card = document.createElement("div"); card.className = "q";
     const h = document.createElement("h3"); h.textContent = (i + 1) + ". " + q.title;
     const t = document.createElement("div"); t.className = "tally";
-    const choices = [...q.opts.map((o, k) => ({ l: LETTERS[k], t: o.t })), UNSURE];
+    const choices = countsFor(q, rows);
+    const top = Math.max(0, ...choices.filter(c => c.l !== "?").map(c => c.n));
     for (const c of choices) {
-      const count = rows.filter(r => r.answers && r.answers[q.key] === c.l).length;
-      const row = document.createElement("div"); row.className = "tally-row";
+      const count = c.n;
+      const row = document.createElement("div"); row.className = "tally-row" + (top && c.l !== "?" && count === top ? " lead" : "");
       const l = document.createElement("strong"); l.textContent = c.l;
       const lbl = document.createElement("span"); lbl.className = "lbl"; lbl.textContent = c.t + (c.l === "A" ? " (suggested)" : "");
       const nEl = document.createElement("span"); nEl.className = "n"; nEl.textContent = count;
