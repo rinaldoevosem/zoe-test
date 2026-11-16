@@ -2,7 +2,7 @@
 
 Type: grilling
 Status: open
-Blocked by: 09, 10, 11
+Blocked by: 09, 10, 11, 22
 Map: [Zoe v1 map](../map.md)
 
 ## Question

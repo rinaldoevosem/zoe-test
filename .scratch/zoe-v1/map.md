@@ -23,6 +23,7 @@ A **locked v1 spec** — every decision needed to take Zoe live in **one pilot c
 - [Research: payroll & HCM export formats](issues/08-payroll-export-research.md): export one row per employee × date × pay code with amount/units (physician stipends), mapped per Department; overtime stays in hospital timekeeping.
 - [Research: hospital identity providers & SSO](issues/06-sso-idp-research.md): plan for Entra ID + Imprivata; SAML first; Better Auth SSO/SCIM plugins suffice for v1 (WorkOS fallback); long sliding sessions; locums via guest/federation or email-code + MFA.
 - [Research: Epic / paging / clinical-comms integration paths](issues/07-ehr-paging-integration-research.md): Epic On-Call Finder takes a CSV over SFTP (no certification); paging vendors poll a 48h feed; v1 needs a 48h JSON+CSV on-call feed with stable IDs, change webhooks and an offline on-call fallback.
+- [Research: constraint solvers for Auto-fill at scale](issues/09-solver-options-research.md): keep greedy for v1; CP-SAT (OR-Tools) via a sidecar later, behind the same interface, triggered by a fairness/gap benchmark.
 - [Provisional ADRs 0001–0008](../../docs/adr/): agent-decided under delegated ownership; **re-opened** by "Confirm or overturn the provisional ADRs".
 
 ## Not yet specified

@@ -2,6 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&family=JetBrains+Mono:wght@500&display=swap">
+
 <style>
 /* Layout: one reading column; diagrams break out to full width in their own scroll boxes. */
 :root {
@@ -36,7 +37,12 @@ section { display: grid; gap: 14px; min-width: 0; }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 12px; height: 12px; border-radius: 3px; border: 1px solid; }
-.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); gap: 24px; align-items: start; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 24px; align-items: start; }
+.col { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.count { font-family: var(--mono); font-size: 13px; color: var(--muted); font-weight: 500; }
+.p-done { background: var(--line); color: var(--muted); }
+.ans { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+.empty { color: var(--muted); font-size: 14px; }
 ul.tickets { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .ticket { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; min-width: 0; }
 .thead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -50,6 +56,7 @@ ul.tickets { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; 
 .q { font-size: 13.5px; color: var(--muted); }
 .deps { font-size: 12.5px; }
 .lbl { font-weight: 600; margin-right: 4px; }
+.ref.done { opacity: .55; text-decoration: line-through; }
 .ref { display: inline-block; padding: 0 6px; border: 1px dashed var(--line); border-radius: 6px; margin: 2px 2px 0 0; }
 .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 24px; }
 .notes ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); font-size: 14px; }
@@ -62,61 +69,58 @@ code { font-family: var(--mono); font-size: 12.5px; }
 <header>
   <span class="eyebrow">Wayfinder map · clinical workforce scheduling</span>
   <h1>Zoe v1 Wayfinding Map</h1>
-  <p class="dest"><b>Destination:</b> a locked v1 spec, with every decision made that is needed to take Zoe live in one pilot clinical department, ready to break into build tickets.</p>
+  <p class="dest"><b>Destination:</b> A locked v1 spec — every decision needed to take Zoe live in one pilot clinical department is made and written down, ready for `/to-tickets` and execution. Reaching it = ticket &quot;Lock the v1 spec&quot; closes.</p>
   <div class="stats">
-    <span class="stat"><b>21</b> decision tickets</span>
-    <span class="stat"><b>9</b> on the frontier now</span>
-    <span class="stat"><b>12</b> blocked</span>
-    <span class="stat"><b>13</b> grilling</span>
-    <span class="stat"><b>5</b> research</span>
-    <span class="stat"><b>2</b> prototype</span>
-    <span class="stat"><b>1</b> task</span>
+    <span class="stat"><b>5</b> of 22 resolved</span>
+    <span class="stat"><b>4</b> on the frontier</span>
+    <span class="stat"><b>13</b> blocked</span>
+    <span class="stat">open: <b>13</b> grilling · <b>0</b> research · <b>2</b> prototype · <b>2</b> task</span>
   </div>
 </header>
-
 <section>
   <h2>Decision map</h2>
-  <p class="lede">Solid arrows mean "blocked by": a ticket opens once every ticket pointing into it is resolved. Grilling and prototype tickets need you in the conversation. Research runs without you.</p>
+  <p class="lede">Solid arrows mean "blocked by": a ticket opens once every ticket pointing into it is resolved. Grilling and prototype tickets need you in the conversation. Research runs without you. Grey boxes are resolved.</p>
   <div class="legend">
     <span><i class="sw" style="background:#d7ece9;border-color:#0f766e"></i>Grilling (with you)</span>
     <span><i class="sw" style="background:#dfe7f6;border-color:#3b5b9a"></i>Research (agent alone)</span>
     <span><i class="sw" style="background:#f3e3cf;border-color:#a3601b"></i>Prototype (with you)</span>
     <span><i class="sw" style="background:#ece2f3;border-color:#7a4a9a"></i>Task</span>
-    <span><i class="sw" style="background:#e4e7ea;border-color:#5b6670"></i>Decided</span>
+    <span><i class="sw" style="background:#e4e7ea;border-color:#5b6670"></i>Resolved</span>
     <span><i class="sw" style="background:#fbf0c9;border-color:#a8841a"></i>Provisional</span>
   </div>
-  <div class="diagram"><pre class="mermaid">%%{init: {"flowchart": {"useMaxWidth": false, "nodeSpacing": 28, "rankSpacing": 56}} }%%
+  <div class="diagram"><pre class="mermaid">%%{init: {&quot;flowchart&quot;: {&quot;useMaxWidth&quot;: false, &quot;nodeSpacing&quot;: 28, &quot;rankSpacing&quot;: 56}} }%%
 flowchart LR
   subgraph KNOWN[&quot;Decided so far&quot;]
-    D1[&quot;Incumbent research&lt;br/&gt;(capabilities + pains)&quot;]:::done
+    D1[&quot;Incumbent research&quot;]:::done
     D2[&quot;v0 prototype spec&lt;br/&gt;built &amp; tested&quot;]:::done
     D3[&quot;ADRs 0001–0008&lt;br/&gt;provisional&quot;]:::prov
+    T05[&quot;05 · Compliance: HIPAA / SOC 2&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::done
+    T06[&quot;06 · Hospital SSO &amp; IdPs&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::done
+    T07[&quot;07 · Epic / paging paths&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::done
+    T08[&quot;08 · Payroll formats&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::done
+    T09[&quot;09 · Solver options&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::done
   end
   subgraph FRONTIER[&quot;Frontier: takeable now&quot;]
-    T01[&quot;01 · Destination &amp; pilot&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T02[&quot;02 · Confirm provisional ADRs&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T03[&quot;03 · Where Zoe lives&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T04[&quot;04 · Business model &amp; licensing&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T05[&quot;05 · Compliance: HIPAA / SOC 2&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::research
-    T06[&quot;06 · Hospital SSO &amp; IdPs&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::research
-    T07[&quot;07 · Epic / paging paths&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::research
-    T08[&quot;08 · Payroll formats&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::research
-    T09[&quot;09 · Solver options&lt;br/&gt;&lt;i&gt;research&lt;/i&gt;&quot;]:::research
+    T01[&quot;01 · Destination &amp; pilot&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T02[&quot;02 · Confirm provisional ADRs&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T03[&quot;03 · Where Zoe lives&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T04[&quot;04 · Business model &amp; licensing&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
   end
   subgraph FOG[&quot;Blocked&quot;]
     T10[&quot;10 · Real schedule sample&lt;br/&gt;&lt;i&gt;task&lt;/i&gt;&quot;]:::task
-    T11[&quot;11 · Rule catalogue&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
+    T11[&quot;11 · Rule catalogue&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
     T12[&quot;12 · Rule authoring UX&lt;br/&gt;&lt;i&gt;prototype&lt;/i&gt;&quot;]:::prototype
-    T13[&quot;13 · Auto-fill strategy&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T14[&quot;14 · Auth, tenancy, residency&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T15[&quot;15 · Notification channels&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
+    T13[&quot;13 · Auto-fill strategy&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T14[&quot;14 · Auth, tenancy, residency&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T15[&quot;15 · Notification channels&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
     T16[&quot;16 · Mobile: PWA vs native&lt;br/&gt;&lt;i&gt;prototype&lt;/i&gt;&quot;]:::prototype
-    T17[&quot;17 · Integration scope&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T18[&quot;18 · Nursing scope&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T19[&quot;19 · Credentialing scope&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
-    T20[&quot;20 · Migration &amp; onboarding&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
+    T17[&quot;17 · Integration scope&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T18[&quot;18 · Nursing scope&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T19[&quot;19 · Credentialing scope&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T20[&quot;20 · Migration &amp; onboarding&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
+    T22[&quot;22 · Auto-fill benchmark&lt;br/&gt;&lt;i&gt;task&lt;/i&gt;&quot;]:::task
   end
-  T21[&quot;21 · Lock the v1 spec&lt;br/&gt;&lt;i&gt;grill&lt;/i&gt;&quot;]:::grilling
+  T21[&quot;21 · Lock the v1 spec&lt;br/&gt;&lt;i&gt;grilling&lt;/i&gt;&quot;]:::grilling
   DEST([&quot;Destination&lt;br/&gt;pilot-ready v1 spec&quot;]):::dest
   D3 -.reopened by.-&gt; T02
   D1 -.informs.-&gt; T01
@@ -127,6 +131,7 @@ flowchart LR
   T09 --&gt; T13
   T10 --&gt; T13
   T11 --&gt; T13
+  T22 --&gt; T13
   T05 --&gt; T14
   T06 --&gt; T14
   T03 --&gt; T14
@@ -154,6 +159,7 @@ flowchart LR
   T18 --&gt; T21
   T19 --&gt; T21
   T20 --&gt; T21
+  T10 --&gt; T22
   T21 ==&gt; DEST
   classDef grilling fill:#d7ece9,stroke:#0f766e,color:#0b3b37
   classDef research fill:#dfe7f6,stroke:#3b5b9a,color:#1d2d4f
@@ -161,13 +167,13 @@ flowchart LR
   classDef task fill:#ece2f3,stroke:#7a4a9a,color:#3a2050
   classDef done fill:#e4e7ea,stroke:#5b6670,color:#2a3036
   classDef prov fill:#fbf0c9,stroke:#a8841a,color:#43350a,stroke-dasharray:4 3
-  classDef dest fill:#0f766e,stroke:#0b4f4a,color:#ffffff</pre></div>
+  classDef dest fill:#0f766e,stroke:#0b4f4a,color:#ffffff
+  classDef backlog fill:#f6f1e7,stroke:#8a7a5a,color:#3d3523,stroke-dasharray:4 3</pre></div>
 </section>
-
 <section>
   <h2>Features and specs, mapped to decisions</h2>
   <p class="lede">What the v0 prototype already does, what is left in its backlog, and which decisions on the map will reshape each feature before v1.</p>
-  <div class="diagram"><pre class="mermaid">%%{init: {"flowchart": {"useMaxWidth": false, "nodeSpacing": 28, "rankSpacing": 56}} }%%
+  <div class="diagram"><pre class="mermaid">%%{init: {&quot;flowchart&quot;: {&quot;useMaxWidth&quot;: false, &quot;nodeSpacing&quot;: 28, &quot;rankSpacing&quot;: 56}} }%%
 flowchart LR
   SPEC0[&quot;v0 spec&lt;br/&gt;40 stories&quot;]:::done
   subgraph BUILT[&quot;Built in v0 (zoe/)&quot;]
@@ -190,6 +196,7 @@ flowchart LR
   end
   subgraph DECIDE[&quot;Decisions that reshape them&quot;]
     X11[&quot;11 Rule catalogue&quot;]:::grilling
+    X12[&quot;12 Rule authoring UX&quot;]:::prototype
     X13[&quot;13 Auto-fill strategy&quot;]:::grilling
     X14[&quot;14 Auth, tenancy, residency&quot;]:::grilling
     X15[&quot;15 Notification channels&quot;]:::grilling
@@ -197,7 +204,6 @@ flowchart LR
     X17[&quot;17 Integration scope&quot;]:::grilling
     X18[&quot;18 Nursing scope&quot;]:::grilling
     X19[&quot;19 Credentialing scope&quot;]:::grilling
-    X12[&quot;12 Rule authoring UX&quot;]:::prototype
   end
   V1([&quot;v1 spec → /to-tickets → build&quot;]):::dest
   SPEC0 --&gt; F1 &amp; F2 &amp; F3 &amp; F4 &amp; F5 &amp; F6 &amp; F7 &amp; F8 &amp; F9 &amp; F10
@@ -206,6 +212,8 @@ flowchart LR
   F10 -.-&gt; X12
   F4 -.-&gt; X16
   F10 -.-&gt; X15
+  F7 -.-&gt; X17
+  F9 -.-&gt; X17
   B13 -.-&gt; X14
   B14 -.-&gt; X17
   B15 -.-&gt; X18 &amp; X19
@@ -220,92 +228,23 @@ flowchart LR
   classDef dest fill:#0f766e,stroke:#0b4f4a,color:#ffffff
   classDef backlog fill:#f6f1e7,stroke:#8a7a5a,color:#3d3523,stroke-dasharray:4 3</pre></div>
 </section>
-
 <section>
   <h2>Tickets</h2>
   <div class="cols">
-    <div style="display:grid;gap:10px;min-width:0"><h3>Frontier: takeable now</h3><ul class="tickets"><li class="ticket t-grilling">
-  <div class="thead"><span class="num">01</span><h4>Destination &amp; pilot department</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">What exactly is v1 for? Confirm the destination (a locked v1 spec for one pilot department) and pin the pilot&#x27;s profile: specialty, headcount, one vs many Departments, country/regulator, who the champion is, and the go-live month.</p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">02</span><h4>Confirm or overturn the provisional ADRs</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">ADR-0001…0008 were decided by the agent under delegated ownership, without a grilling session. Walk each one with the owner: keep, amend, or supersede. Highest-stakes: modular monolith on Next.js/Postgres (0001), shared-DB tenancy (0003), auto-approved trades (0005), PWA instead of native (0007).</p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">03</span><h4>Where Zoe lives: repository, hosting, environments</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">This repository was borrowed only for its instance; its original code is unrelated. Decide Zoe&#x27;s permanent home (new repo? org?), hosting target (Vercel, Fly, AWS, Azure for hospital buyers), environments (dev/staging/prod), and CI.</p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">04</span><h4>Business model &amp; licensing</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">MIT open source, open-core with paid enterprise modules, or closed SaaS? Who buys (department chair, health-system IT, medical group)? Price shape (per provider/month, flat per department)? This decides what can stay MIT and what features are &#x27;enterprise&#x27;.</p>
-</li><li class="ticket t-research">
-  <div class="thead"><span class="num">05</span><h4>Research: compliance for scheduling data (HIPAA, SOC 2, BAAs)</h4><span class="pill p-research">Research · AFK</span></div>
-  <p class="q">Is a clinical work schedule PHI? When does a scheduling vendor need a BAA, SOC 2 Type II, HITRUST? What do hospital security questionnaires require (SSO, audit logs, data residency, encryption, pen tests)? Cite primary sources (HHS, AICPA, vendor trust pages).</p>
-</li><li class="ticket t-research">
-  <div class="thead"><span class="num">06</span><h4>Research: hospital identity providers &amp; SSO</h4><span class="pill p-research">Research · AFK</span></div>
-  <p class="q">Which IdPs do target hospitals use (Entra ID/Azure AD, Okta, Ping, Imprivata)? SAML vs OIDC prevalence, SCIM provisioning expectations, and whether Better Auth (or alternatives: WorkOS, Auth.js, Clerk) covers SAML+SCIM well enough for v1.</p>
-</li><li class="ticket t-research">
-  <div class="thead"><span class="num">07</span><h4>Research: Epic / paging / clinical-comms integration paths</h4><span class="pill p-research">Research · AFK</span></div>
-  <p class="q">How do on-call tools feed Epic On-Call Finder and Secure Chat (interfaces, App Orchard/Showroom, HL7/FHIR, flat files)? Same for Spok, Vocera, PerfectServe, TigerConnect. Effort and certification cost for each.</p>
-</li><li class="ticket t-research">
-  <div class="thead"><span class="num">08</span><h4>Research: payroll &amp; HCM export formats</h4><span class="pill p-research">Research · AFK</span></div>
-  <p class="q">File/API formats and pay-code models for ADP, UKG/Kronos, Workday, Dayforce. What minimum export would let a pilot run payroll from Zoe Time Entries?</p>
-</li><li class="ticket t-research">
-  <div class="thead"><span class="num">09</span><h4>Research: constraint solvers for Auto-fill at scale</h4><span class="pill p-research">Research · AFK</span></div>
-  <p class="q">Compare greedy (today) vs CP-SAT (OR-Tools), Timefold, and MILP for departments of 20–300 staff: solution quality on fairness, run time, explainability, licensing, and how to call them from Node (WASM, sidecar service).</p>
-</li></ul></div>
-    <div style="display:grid;gap:10px;min-width:0"><h3>Blocked</h3><ul class="tickets"><li class="ticket t-task">
-  <div class="thead"><span class="num">10</span><h4>Task: collect a real (anonymised) schedule and rule book from the pilot</h4><span class="pill p-task">Task · HITL</span></div>
-  <p class="q">Obtain 3 months of the pilot department&#x27;s past schedule, their written rules (rest, call limits, fairness expectations, holiday rotation), and current request/swap volumes. Without this, rule and solver decisions are guesses.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">11</span><h4>Rule catalogue for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Which Rule kinds must v1 express beyond today&#x27;s (tags, overlap, time off, rest, consecutive days, weekly max, preferences)? Candidates: holiday rotation, weekend pairing, post-call day off, call-per-month caps, min/max per Shift Type, series rules, target percentages, seniority. Hard vs Soft defaults.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span>, <span class="ref">10 · Real schedule sample</span></p>
-</li><li class="ticket t-prototype">
-  <div class="thead"><span class="num">12</span><h4>Prototype: how schedulers author Rules</h4><span class="pill p-prototype">Prototype · HITL</span></div>
-  <p class="q">Plain-language rule builder vs form-per-rule vs templates per specialty. Prototype 2–3 variants with the pilot scheduler; the reported pain is &#x27;needed vendor help to configure&#x27;.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">11 · Rule catalogue</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">13</span><h4>Auto-fill strategy for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Keep the deterministic greedy fill, add a solver adapter behind the same interface, or both (greedy for edits, solver for full builds)? Must keep: never move Locked Assignments, fill only gaps on request, explain every pick.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">09 · Solver options</span>, <span class="ref">10 · Real schedule sample</span>, <span class="ref">11 · Rule catalogue</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">14</span><h4>Production auth, tenancy isolation and data residency</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Pick the auth provider and SSO/SCIM scope; confirm shared-DB + Postgres RLS (ADR-0003) or move to DB-per-tenant for enterprise buyers; region/data-residency commitments.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">05 · Compliance: HIPAA / SOC 2</span>, <span class="ref">06 · Hospital SSO &amp; IdPs</span>, <span class="ref">03 · Where Zoe lives</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">15</span><h4>Notification channels &amp; urgency model</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Which channels in v1 (in-app, email, SMS, web push, native push)? What counts as urgent (uncovered on-call within 24h?) and who gets it? Quiet hours, digests, per-user tuning — the incumbent&#x27;s duplicates/noise is a top complaint.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span>, <span class="ref">04 · Business model &amp; licensing</span></p>
-</li><li class="ticket t-prototype">
-  <div class="thead"><span class="num">16</span><h4>Prototype: mobile delivery — PWA vs native shell</h4><span class="pill p-prototype">Prototype · HITL</span></div>
-  <p class="q">Can an installable PWA meet staff expectations (push on iOS, offline schedule, biometric unlock, never-logged-out)? Prototype the PWA on iOS/Android and a Capacitor shell; decide whether ADR-0007 stands.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">15 · Notification channels</span>, <span class="ref">02 · Confirm provisional ADRs</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">17</span><h4>Integration scope for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Which of Epic On-Call Finder, paging vendors, payroll exports, calendar feeds, public REST API ship in v1 vs later — driven by what the pilot actually needs to switch.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">07 · Epic / paging paths</span>, <span class="ref">08 · Payroll formats</span>, <span class="ref">01 · Destination &amp; pilot</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">18</span><h4>Nurse &amp; staff scheduling scope</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Is v1 provider-only (physicians, CRNAs, APPs) or also nursing units (patterns, self-scheduling windows, float pool, census/acuity, open-shift broadcast)? This roughly doubles the rule and UX surface.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">19</span><h4>Credentialing scope</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Tags with expiry dates that gate eligibility (light) vs full credentialing/privileging/payer enrollment (heavy, a product of its own). What does the pilot need on day one?</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">20</span><h4>Migration &amp; onboarding from the incumbent</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">How does a department move in: import staff, Shift Types, history (for fairness carry-over) from the incumbent&#x27;s API/exports or spreadsheets? Parallel-run period? Who does setup — self-serve wizard or white-glove?</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">10 · Real schedule sample</span>, <span class="ref">01 · Destination &amp; pilot</span></p>
-</li><li class="ticket t-grilling">
-  <div class="thead"><span class="num">21</span><h4>Lock the v1 spec</h4><span class="pill p-grilling">Grilling · HITL</span></div>
-  <p class="q">Fold every resolved decision into one v1 spec (via /to-spec), cut scope to what the pilot needs to go live, and hand it to /to-tickets. This ticket closing means the destination is reached.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">02 · Confirm provisional ADRs</span>, <span class="ref">03 · Where Zoe lives</span>, <span class="ref">04 · Business model &amp; licensing</span>, <span class="ref">11 · Rule catalogue</span>, <span class="ref">12 · Rule authoring UX</span>, <span class="ref">13 · Auto-fill strategy</span>, <span class="ref">14 · Auth, tenancy, residency</span>, <span class="ref">15 · Notification channels</span>, <span class="ref">16 · Mobile: PWA vs native</span>, <span class="ref">17 · Integration scope</span>, <span class="ref">18 · Nursing scope</span>, <span class="ref">19 · Credentialing scope</span>, <span class="ref">20 · Migration &amp; onboarding</span></p>
-</li></ul></div>
+    <div class="col"><h3>Frontier: takeable now <span class="count">4</span></h3><ul class="tickets"><li class="ticket"><div class="thead"><span class="num">01</span><h4>Destination &amp; pilot department</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">What exactly is v1 for? Confirm the destination (a locked v1 spec for one pilot department) and pin the pilot&#x27;s profile: specialty, headcount, one vs many Departments, country/regulator, who the champion is, and the go-live month.</p></li><li class="ticket"><div class="thead"><span class="num">02</span><h4>Confirm or overturn the provisional ADRs</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">ADR-0001…0008 were decided by the agent under delegated ownership, without a grilling session. Walk each one with the owner: keep, amend, or supersede. Highest-stakes: modular monolith on Next.js/Postgres (0001), shared-DB tenancy (0003), auto-approved trades (0005), PWA instead of native (0007).</p></li><li class="ticket"><div class="thead"><span class="num">03</span><h4>Where Zoe lives: repository, hosting, environments</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">This repository was borrowed only for its instance; its original code is unrelated. Decide Zoe&#x27;s permanent home (new repo? org?), hosting target (Vercel, Fly, AWS, Azure for hospital buyers), environments (dev/staging/prod), and CI.</p></li><li class="ticket"><div class="thead"><span class="num">04</span><h4>Business model &amp; licensing</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">MIT open source, open-core with paid enterprise modules, or closed SaaS? Who buys (department chair, health-system IT, medical group)? Price shape (per provider/month, flat per department)? This decides what can stay MIT and what features are &#x27;enterprise&#x27;.</p></li></ul></div>
+    <div class="col"><h3>Blocked <span class="count">13</span></h3><ul class="tickets"><li class="ticket"><div class="thead"><span class="num">10</span><h4>Task: collect a real (anonymised) schedule and rule book from the pilot</h4><span class="pill p-task">Task · HITL</span></div><p class="q">Obtain 3 months of the pilot department&#x27;s past schedule, their written rules (rest, call limits, fairness expectations, holiday rotation), and current request/swap volumes. Without this, rule and solver decisions are guesses.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p></li><li class="ticket"><div class="thead"><span class="num">11</span><h4>Rule catalogue for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Which Rule kinds must v1 express beyond today&#x27;s (tags, overlap, time off, rest, consecutive days, weekly max, preferences)? Candidates: holiday rotation, weekend pairing, post-call day off, call-per-month caps, min/max per Shift Type, series rules, target percentages, seniority. Hard vs Soft defaults.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span>, <span class="ref">10 · Real schedule sample</span></p></li><li class="ticket"><div class="thead"><span class="num">12</span><h4>Prototype: how schedulers author Rules</h4><span class="pill p-prototype">Prototype · HITL</span></div><p class="q">Plain-language rule builder vs form-per-rule vs templates per specialty. Prototype 2–3 variants with the pilot scheduler; the reported pain is &#x27;needed vendor help to configure&#x27;.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">11 · Rule catalogue</span></p></li><li class="ticket"><div class="thead"><span class="num">13</span><h4>Auto-fill strategy for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Keep the deterministic greedy fill, add a solver adapter behind the same interface, or both (greedy for edits, solver for full builds)? Must keep: never move Locked Assignments, fill only gaps on request, explain every pick.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref done">09 · Solver options</span>, <span class="ref">10 · Real schedule sample</span>, <span class="ref">11 · Rule catalogue</span>, <span class="ref">22 · Auto-fill benchmark</span></p></li><li class="ticket"><div class="thead"><span class="num">14</span><h4>Production auth, tenancy isolation and data residency</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Pick the auth provider and SSO/SCIM scope; confirm shared-DB + Postgres RLS (ADR-0003) or move to DB-per-tenant for enterprise buyers; region/data-residency commitments.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref done">05 · Compliance: HIPAA / SOC 2</span>, <span class="ref done">06 · Hospital SSO &amp; IdPs</span>, <span class="ref">03 · Where Zoe lives</span></p></li><li class="ticket"><div class="thead"><span class="num">15</span><h4>Notification channels &amp; urgency model</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Which channels in v1 (in-app, email, SMS, web push, native push)? What counts as urgent (uncovered on-call within 24h?) and who gets it? Quiet hours, digests, per-user tuning — the incumbent&#x27;s duplicates/noise is a top complaint.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span>, <span class="ref">04 · Business model &amp; licensing</span></p></li><li class="ticket"><div class="thead"><span class="num">16</span><h4>Prototype: mobile delivery — PWA vs native shell</h4><span class="pill p-prototype">Prototype · HITL</span></div><p class="q">Can an installable PWA meet staff expectations (push on iOS, offline schedule, biometric unlock, never-logged-out)? Prototype the PWA on iOS/Android and a Capacitor shell; decide whether ADR-0007 stands.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">15 · Notification channels</span>, <span class="ref">02 · Confirm provisional ADRs</span></p></li><li class="ticket"><div class="thead"><span class="num">17</span><h4>Integration scope for v1</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Which of Epic On-Call Finder, paging vendors, payroll exports, calendar feeds, public REST API ship in v1 vs later — driven by what the pilot actually needs to switch.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref done">07 · Epic / paging paths</span>, <span class="ref done">08 · Payroll formats</span>, <span class="ref">01 · Destination &amp; pilot</span></p></li><li class="ticket"><div class="thead"><span class="num">18</span><h4>Nurse &amp; staff scheduling scope</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Is v1 provider-only (physicians, CRNAs, APPs) or also nursing units (patterns, self-scheduling windows, float pool, census/acuity, open-shift broadcast)? This roughly doubles the rule and UX surface.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p></li><li class="ticket"><div class="thead"><span class="num">19</span><h4>Credentialing scope</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Tags with expiry dates that gate eligibility (light) vs full credentialing/privileging/payer enrollment (heavy, a product of its own). What does the pilot need on day one?</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">01 · Destination &amp; pilot</span></p></li><li class="ticket"><div class="thead"><span class="num">20</span><h4>Migration &amp; onboarding from the incumbent</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">How does a department move in: import staff, Shift Types, history (for fairness carry-over) from the incumbent&#x27;s API/exports or spreadsheets? Parallel-run period? Who does setup — self-serve wizard or white-glove?</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">10 · Real schedule sample</span>, <span class="ref">01 · Destination &amp; pilot</span></p></li><li class="ticket"><div class="thead"><span class="num">22</span><h4>Task: benchmark Auto-fill fairness and gaps on a realistic department</h4><span class="pill p-task">Task · HITL</span></div><p class="q">Surfaced by the solver research. Run today&#x27;s greedy Auto-fill on the pilot&#x27;s real (anonymised) schedule and rules, or on a public benchmark of similar size if none exists. Measure:
+
+- Load spread per FTE
+- unfilled gaps that a feasibility check shows could be filled
+- run time
+
+Compare against a quick CP-SAT prototype. The numbers set the trigger threshold for adding a solver adapter and feed &quot;Auto-fill strategy for v1&quot;.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">10 · Real schedule sample</span></p></li><li class="ticket"><div class="thead"><span class="num">21</span><h4>Lock the v1 spec</h4><span class="pill p-grilling">Grilling · HITL</span></div><p class="q">Fold every resolved decision into one v1 spec (via /to-spec), cut scope to what the pilot needs to go live, and hand it to /to-tickets. This ticket closing means the destination is reached.</p><p class="deps"><span class="lbl">Blocked by</span> <span class="ref">02 · Confirm provisional ADRs</span>, <span class="ref">03 · Where Zoe lives</span>, <span class="ref">04 · Business model &amp; licensing</span>, <span class="ref">11 · Rule catalogue</span>, <span class="ref">12 · Rule authoring UX</span>, <span class="ref">13 · Auto-fill strategy</span>, <span class="ref">14 · Auth, tenancy, residency</span>, <span class="ref">15 · Notification channels</span>, <span class="ref">16 · Mobile: PWA vs native</span>, <span class="ref">17 · Integration scope</span>, <span class="ref">18 · Nursing scope</span>, <span class="ref">19 · Credentialing scope</span>, <span class="ref">20 · Migration &amp; onboarding</span></p></li></ul></div>
+    <div class="col"><h3>Resolved <span class="count">5</span></h3><ul class="tickets"><li class="ticket"><div class="thead"><span class="num">05</span><h4>Research: compliance for scheduling data (HIPAA, SOC 2, BAAs)</h4><span class="pill p-done">Resolved</span></div><ul class="ans"><li>A staff work schedule is not PHI: HIPAA excludes employment records held by a covered entity as employer (45 CFR 160.103). Shifts, rosters, time off, punches and payroll stay out of scope unless they carry patient data.</li><li>A BAA is needed only if Zoe touches patient PHI. Hospitals may ask for one anyway; keep a template.</li><li>SOC 2 Type II is the procurement norm for scheduling vendors; HITRUST is not expected at this size (incumbents claim SOC 2, not HITRUST).</li><li>The proposed 2025 Security Rule update (mandatory encryption, MFA, annual pen tests) is not final, with final action projected around July 2027. Build to it anyway.</li></ul></li><li class="ticket"><div class="thead"><span class="num">06</span><h4>Research: hospital identity providers &amp; SSO</h4><span class="pill p-done">Resolved</span></div><ul class="ans"><li>Assume Microsoft Entra ID, with Imprivata badge-tap on shared workstations. Okta is second and Ping a distant third (directional only; real share data is behind KLAS).</li><li>Build SAML 2.0 first, then OIDC. SCIM 2.0 is expected at enterprise scale; a single-department pilot can create accounts on first SSO login.</li><li>Better Auth SSO and SCIM plugins cover SAML, OIDC, per-Organization providers, domain verification and SCIM for v1, with no licence cost. Zoe owns security patching; several high-severity SSO advisories in 2026 are fixed in current versions.</li><li>Phones: long sliding session; the hospital&#x27;s IdP policy decides re-authentication. Never log out on app switch. Badge-tap is Imprivata&#x27;s job.</li></ul></li><li class="ticket"><div class="thead"><span class="num">07</span><h4>Research: Epic / paging / clinical-comms integration paths</h4><span class="pill p-done">Resolved</span></div><ul class="ans"><li>Epic On-Call Finder is fed by a flat file, not an API. A CSV over SFTP every 5–10 minutes, imported and mapped to Epic Team IDs by the hospital&#x27;s Epic team. No certification is needed. Secure Chat reads On-Call Finder, so one feed covers both. There is no FHIR or HL7 write path for on-call.</li><li>Paging and comms vendors build their own connectors against the scheduler: Spok: API push every 15 minutes, or CSV over SFTP.; Vocera and PerfectServe: poll a REST feed for the next 48 hours.; TigerConnect: maps schedules to roles.; Voalte: mostly links out.; Hospital IT handles SFTP, firewalls and ID mapping.</li><li>Cost is hospital labour and Epic&#x27;s build queue, not program fees (Epic Vendor Services is about $1.9k a year; a Showroom listing needs a live customer first).</li><li>Day-one need (inference): keep the hospital&#x27;s existing on-call lookup working. Minimum Zoe surface: a JSON on-call feed at least 48 hours ahead, with stable external IDs and call order; the same as CSV pushed over SFTP every 5–15 minutes; a publish/change webhook; an ID-mapping table and token auth; no FHIR in v1</li></ul></li><li class="ticket"><div class="thead"><span class="num">08</span><h4>Research: payroll &amp; HCM export formats</h4><span class="pill p-done">Resolved</span></div><ul class="ans"><li>ADP Workforce Now and Vantage, UKG, Workday and Dayforce all import time as hours or amounts per employee, per date, per pay code, validated against a pay-code table the customer configures. Zoe&#x27;s current scheduled/worked/variance CSV cannot be loaded as-is.</li><li>Minimum v1 export: a long-format CSV with one row per employee, work date and pay code, driven by a per-Department pay-code mapping. Columns: employee_payroll_id, company_code, batch_id, period_start, period_end, work_date, pay_code, hours, units, amount, cost_center, source_ref.</li><li>Hospitals usually route schedule → timekeeping (often UKG) → payroll, and timekeeping calculates overtime (40-hour week or the 8/80 rule). Zoe exports classified time and leaves overtime to the hospital.</li><li>Physicians are FLSA-exempt (29 CFR 541.304) and are paid flat amounts: call stipends, per-shift rates, differentials. So amount and units columns are required, not just hours.</li></ul></li><li class="ticket"><div class="thead"><span class="num">09</span><h4>Research: constraint solvers for Auto-fill at scale</h4><span class="pill p-done">Resolved</span></div><ul class="ans"><li>v1: keep the greedy Auto-fill. It already meets the hard requirements: fills only gaps, respects Locked Assignments, explains every pick, deterministic. Its weakness is period-wide fairness, because it never revisits earlier picks.</li><li>Future solver: CP-SAT (Google OR-Tools, Apache-2.0).; Models Zoe&#x27;s Rules directly.; Fixes Locked Assignments.; Accepts the current schedule as hints.; Runs deterministically.; Can name the conflicting Rules for an unfillable gap.; It has no official Node binding, so it needs a Python sidecar behind the same Auto-fill interface.</li><li>Rejected for now:; highs-js (MIT, in-process): single-threaded; likely struggles at 300 staff × 3 months (inference, needs a benchmark).; Timefold Community: Java-only, and its explanation features are Enterprise-only.; Gurobi: commercial.; CBC: volunteer-maintained.</li><li>Keeping explanations with a solver: show Rule slack, re-solve with &quot;why not this person?&quot; forced (counterfactual), and name the conflicting Rules for unfilled gaps.</li></ul></li></ul></div>
   </div>
 </section>
-
 <section class="notes">
-  <div style="display:grid;gap:10px"><h2>Not yet specified</h2><ul>
-    <li><b>Clinical capacity and rooms.</b> Depends on the pilot's specialty.</li>
-    <li><b>Analytics personas.</b> Executive, finance and CMS time-allocation views beyond fairness and hours.</li>
-    <li><b>Compensation (wRVU).</b> Waits on the business model.</li>
-    <li><b>Public API and webhooks.</b> Waits on integration scope.</li>
-    <li><b>Support and SLAs.</b> Uptime targets and an offline fallback for Who's On Call.</li>
-    <li><b>Internationalisation.</b> Only needed if the pilot is outside the US.</li>
-  </ul></div>
-  <div style="display:grid;gap:10px"><h2>Out of scope</h2><ul>
-    <li><b>Residency program management.</b> Evaluations, accreditation and GME reimbursement are a separate product (proposed, to confirm).</li>
-    <li><b>This repository's original code.</b> The repository was borrowed only for its instance.</li>
-  </ul></div>
+  <div class="col"><h2>Not yet specified</h2><ul><li><b>Clinical capacity / rooms</b>: whether room &amp; space assignment belongs anywhere near v1; depends on the pilot&#x27;s specialty.</li><li><b>Analytics personas</b>: which dashboards beyond fairness/hours a buyer needs to sign (exec, finance, CMS time allocation).</li><li><b>Compensation / productivity (wRVU)</b>: whether schedule data must feed compensation; unknown until the business model is set.</li><li><b>Pay-code model</b>: payroll research shows exports need a per-Department pay-code mapping (call stipends, per-shift rates, differentials); becomes a ticket once integration scope and the pilot&#x27;s timekeeping system are known.</li><li><b>Public API &amp; webhooks</b>: shape and auth, once integration scope is known.</li><li><b>Support &amp; SLAs</b>: uptime targets; integration research confirms a static/cacheable Who&#x27;s On Call fallback is expected.</li><li><b>Internationalisation</b>: languages, non-US labour rules — only if the pilot is outside the US.</li></ul></div>
+  <div class="col"><h2>Out of scope</h2><ul><li>Residency program management (evaluations, accreditation, GME reimbursement): a separate product category. *(Proposed — confirm in &quot;Destination &amp; pilot department&quot;.)*</li><li>The repository&#x27;s original, unrelated code (borrowed instance).</li></ul></div>
 </section>
-
-<footer>Source of truth: <code>.scratch/zoe-v1/map.md</code>, with one file per ticket in <code>.scratch/zoe-v1/issues/</code> and Mermaid copies in <code>.scratch/zoe-v1/flowchart.md</code>. Vocabulary is in <code>GLOSSARY.md</code> and provisional decisions are in <code>docs/adr/</code>.</footer>
+<footer>Generated from <code>.scratch/zoe-v1/map.md</code> and <code>.scratch/zoe-v1/issues/</code> by <code>render_map.py</code>. Research findings are in <code>docs/research/</code>. Several of them rest on search summaries only; each file says where.</footer>
 </div>
