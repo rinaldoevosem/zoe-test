@@ -12,6 +12,8 @@ export interface StaffMember {
   /** 0 < fte <= 1 */
   fte: number;
   tags: string[];
+  /** Certifications: the last date (inclusive) each Tag qualifies the Staff Member. Tags not listed never expire. */
+  tagExpiry?: Record<string, LocalDate>;
 }
 
 export interface Shift {

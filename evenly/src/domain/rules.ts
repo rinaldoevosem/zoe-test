@@ -6,6 +6,7 @@
  *   checkAssignment(ctx, assignment)   → Violations the Assignment would newly introduce
  *   newViolations(before, after)       → Violations present in `after` but not in `before`
  */
+import { holdsTag } from "./certifications";
 import { addDays, daysBetween, shiftInterval, weekStart } from "./time";
 import type { Assignment, Preference, ScheduleContext, Shift, StaffId, Violation } from "./types";
 
@@ -99,8 +100,12 @@ function evaluateStaff(ctx: ScheduleContext, staffId: StaffId, shifts: Shift[]):
 
   for (const { s } of timed) {
     const missing = s.requiredTags.filter((t) => !member.tags.includes(t));
+    const expired = s.requiredTags.filter((t) => member.tags.includes(t) && !holdsTag(member, t, s.date));
     if (missing.length) {
       out.push(v("requiredTags", "hard", staffId, s, `${member.name} lacks required tag${missing.length > 1 ? "s" : ""} ${missing.join(", ")}`));
+    } else if (expired.length) {
+      out.push(v("requiredTags", "hard", staffId, s,
+        expired.map((t) => `${member.name}'s ${t} Certification expired on ${member.tagExpiry![t]}`).join("; ")));
     }
     const off = ctx.timeOff.find((t) => t.staffId === staffId && t.startDate <= s.date && s.date <= t.endDate);
     if (off) out.push(v("timeOff", "hard", staffId, s, `${member.name} has approved time off ${off.startDate} – ${off.endDate}`));

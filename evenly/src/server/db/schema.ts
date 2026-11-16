@@ -39,6 +39,8 @@ export const staffMembers = pgTable("staff_members", {
   clinicalRole: text("clinical_role").notNull(),
   fte: real("fte").notNull().default(1),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
+  /** Certifications: Tag → last qualifying date (YYYY-MM-DD). */
+  tagExpiry: jsonb("tag_expiry").$type<Record<string, string>>().notNull().default({}),
   active: boolean("active").notNull().default(true),
   createdAt: createdAt(),
 });

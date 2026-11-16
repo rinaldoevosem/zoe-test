@@ -84,6 +84,7 @@ const staffInput = z.object({
   clinicalRole: z.string().min(1).max(40),
   fte: z.number().gt(0, "FTE must be above 0").max(1),
   tags: z.array(z.string().min(1).max(30)).max(20),
+  tagExpiry: z.record(z.string(), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a date like 2027-03-31")).default({}),
   phone: z.string().max(40).optional(),
 });
 
@@ -91,16 +92,18 @@ export async function saveStaffMember(db: DB, actor: Actor, input: unknown, now 
   require(actor, "config:edit");
   const s = staffInput.parse(input);
   const tags = [...new Set(s.tags.map((t) => t.trim().toLowerCase()).filter(Boolean))];
+  // Keep expiry dates only for Tags the Staff Member still holds.
+  const tagExpiry = Object.fromEntries(Object.entries(s.tagExpiry).map(([t, d]) => [t.trim().toLowerCase(), d]).filter(([t]) => tags.includes(t)));
   const newHardViolations = await rejudge(db, actor, now, async () => {
     if (s.id) {
-      const [row] = await db.update(schema.staffMembers).set({ name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags, phone: s.phone ?? null })
+      const [row] = await db.update(schema.staffMembers).set({ name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags, tagExpiry, phone: s.phone ?? null })
         .where(and(eq(schema.staffMembers.id, s.id), eq(schema.staffMembers.departmentId, actor.departmentId), eq(schema.staffMembers.organizationId, actor.organizationId))).returning();
       if (!row) throw new DomainError("Staff Member not found");
     } else {
-      await db.insert(schema.staffMembers).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags, phone: s.phone ?? null });
+      await db.insert(schema.staffMembers).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags, tagExpiry, phone: s.phone ?? null });
     }
   });
-  await audit(db, actor, "staff.save", `Saved Staff Member ${s.name}${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, { tags, fte: s.fte });
+  await audit(db, actor, "staff.save", `Saved Staff Member ${s.name}${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, { tags, tagExpiry, fte: s.fte });
   return { newHardViolations };
 }
 

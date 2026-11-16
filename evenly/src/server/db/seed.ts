@@ -115,7 +115,8 @@ export async function seed(db: DB, now: number, specialty: Specialty = "hospital
     settings: { rules: cfg.rules, tradePolicy: "auto", requestLimit: 3, autoPublish: false },
   }).returning();
   const staff = await db.insert(schema.staffMembers).values(STAFF.map((s, i) => ({
-    id: `demo-staff-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email, clinicalRole: s.role, fte: s.fte, tags: s.tags,
+    id: `demo-staff-${i}`, organizationId: org.id, departmentId: dept.id, name: s.name, email: s.email, clinicalRole: s.role, fte: s.fte, tags: [...s.tags],
+    tagExpiry: Object.fromEntries(Object.entries(s.tagExpiry ?? {}).map(([tag, days]) => [tag, addDays(instantToLocalDate(now, TZ), days)])),
     phone: `+1 555 01${String(i).padStart(2, "0")}`,
   }))).returning();
   const users = await db.insert(schema.users).values([

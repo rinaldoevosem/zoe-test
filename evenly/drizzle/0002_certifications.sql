@@ -1,0 +1,1 @@
+ALTER TABLE "staff_members" ADD COLUMN "tag_expiry" jsonb DEFAULT '{}'::jsonb NOT NULL;

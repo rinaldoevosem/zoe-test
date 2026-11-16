@@ -86,7 +86,7 @@ export async function loadSnapshot(
     assignmentRows,
     ctx: {
       timeZone: department.timeZone,
-      staff: staff.map((s) => ({ id: s.id, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags: s.tags })),
+      staff: staff.map((s) => ({ id: s.id, name: s.name, clinicalRole: s.clinicalRole, fte: s.fte, tags: s.tags, tagExpiry: s.tagExpiry })),
       shifts: shiftViews,
       assignments: assignmentRows.map((a) => ({ shiftId: a.shiftId, staffId: a.staffMemberId, locked: a.locked })),
       timeOff: off.map((t) => ({ staffId: t.staffMemberId, startDate: t.startDate, endDate: t.endDate })),

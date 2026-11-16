@@ -113,12 +113,16 @@ export function RulesForm({ initial, readOnly }: { initial: DepartmentSettings; 
   );
 }
 
-interface StaffRow { id?: string; name: string; clinicalRole: string; fte: number; tags: string[]; phone: string }
+interface StaffRow { id?: string; name: string; clinicalRole: string; fte: number; tags: string[]; tagExpiry: Record<string, string>; phone: string }
 
-export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: boolean }) {
+const parseTags = (text: string) => [...new Set(text.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))];
+
+/** `today` comes from the server clock so the list can flag expired and soon-expiring Certifications. */
+export function StaffEditor({ staff, readOnly, today }: { staff: StaffRow[]; readOnly: boolean; today: string }) {
   const { pending, run } = useAction();
   const [editing, setEditing] = useState<(StaffRow & { tagText: string }) | null>(null);
-  const open = (s?: StaffRow) => setEditing(s ? { ...s, tagText: s.tags.join(", ") } : { name: "", clinicalRole: "physician", fte: 1, tags: [], phone: "", tagText: "" });
+  const open = (s?: StaffRow) => setEditing(s ? { ...s, tagText: s.tags.join(", ") } : { name: "", clinicalRole: "physician", fte: 1, tags: [], tagExpiry: {}, phone: "", tagText: "" });
+  const soon = addDaysLocal(today, 30);
   return (
     <>
       {!readOnly && <Button variant="outline" size="sm" className="mb-3" onClick={() => open()}><Plus /> Add Staff Member</Button>}
@@ -128,7 +132,17 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
             <div className="min-w-0">
               <div className="truncate font-medium">{s.name}</div>
               <div className="text-xs text-muted-foreground">{s.clinicalRole} · FTE {s.fte}</div>
-              <div className="mt-1 flex flex-wrap gap-1">{s.tags.map((t) => <Badge key={t} variant="secondary">{t}</Badge>)}</div>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {s.tags.map((t) => {
+                  const exp = s.tagExpiry[t];
+                  const state = !exp ? "" : exp < today ? "expired" : exp <= soon ? "soon" : "";
+                  return (
+                    <Badge key={t} variant={state === "expired" ? "destructive" : state === "soon" ? "outline" : "secondary"} title={exp ? `Certification valid through ${exp}` : undefined}>
+                      {t}{exp && <span className="font-normal">{state === "expired" ? ` · expired ${exp}` : ` · until ${exp}`}</span>}
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
             {!readOnly && <Button size="icon" variant="ghost" aria-label={`Edit ${s.name}`} onClick={() => open(s)}><Pencil /></Button>}
           </li>
@@ -143,7 +157,9 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
               onSubmit={(e) => {
                 e.preventDefault();
                 const { tagText, ...rest } = editing;
-                run(() => saveStaffAction({ ...rest, tags: tagText.split(",").map((t) => t.trim()).filter(Boolean) }), (d) => { setEditing(null); warnRejudged(d); });
+                const tags = parseTags(tagText);
+                const tagExpiry = Object.fromEntries(Object.entries(editing.tagExpiry).filter(([t, d]) => d && tags.includes(t)));
+                run(() => saveStaffAction({ ...rest, tags, tagExpiry }), (d) => { setEditing(null); warnRejudged(d); });
               }}
             >
               <div className="grid gap-2"><Label htmlFor="sn">Name</Label><Input id="sn" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
@@ -151,7 +167,19 @@ export function StaffEditor({ staff, readOnly }: { staff: StaffRow[]; readOnly: 
                 <div className="grid gap-2"><Label htmlFor="sr">Clinical Role</Label><Input id="sr" required value={editing.clinicalRole} onChange={(e) => setEditing({ ...editing, clinicalRole: e.target.value })} /></div>
                 <div className="grid gap-2"><Label htmlFor="sf">FTE</Label><Input id="sf" type="number" step="0.1" min="0.1" max="1" required value={editing.fte} onChange={(e) => setEditing({ ...editing, fte: Number(e.target.value) })} /></div>
               </div>
-              <div className="grid gap-2"><Label htmlFor="st">Tags (comma separated)</Label><Input id="st" value={editing.tagText} onChange={(e) => setEditing({ ...editing, tagText: e.target.value })} placeholder="cardiac, peds" /></div>
+              <div className="grid gap-2"><Label htmlFor="st">Tags (comma separated)</Label><Input id="st" value={editing.tagText} onChange={(e) => setEditing({ ...editing, tagText: e.target.value })} placeholder="md, procedures" /></div>
+              {parseTags(editing.tagText).length > 0 && (
+                <fieldset className="grid gap-2 rounded-md border p-3">
+                  <legend className="px-1 text-sm font-medium">Certification expiry <span className="font-normal text-muted-foreground">(optional; leave blank if a Tag never expires)</span></legend>
+                  {parseTags(editing.tagText).map((t) => (
+                    <div key={t} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                      <Label htmlFor={`exp-${t}`} className="truncate">{t}</Label>
+                      <Input id={`exp-${t}`} type="date" className="w-44" value={editing.tagExpiry[t] ?? ""}
+                        onChange={(e) => setEditing({ ...editing, tagExpiry: { ...editing.tagExpiry, [t]: e.target.value } })} />
+                    </div>
+                  ))}
+                </fieldset>
+              )}
               <div className="grid gap-2"><Label htmlFor="sp">Phone</Label><Input id="sp" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} /></div>
               <DialogFooter><Button disabled={pending}>Save</Button></DialogFooter>
             </form>
@@ -256,4 +284,11 @@ export function ShiftTypeEditor({ types, readOnly }: { types: ShiftTypeRow[]; re
       </Dialog>
     </>
   );
+}
+
+/** YYYY-MM-DD plus n days, for client-side display only. */
+function addDaysLocal(date: string, n: number): string {
+  const d = new Date(date + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }

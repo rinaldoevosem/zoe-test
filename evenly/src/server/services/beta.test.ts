@@ -8,7 +8,7 @@ import { getDepartment, loadSnapshot } from "../repo";
 import type { Actor } from "./common";
 import { onCallRows, whosOnCall } from "./oncall";
 import { createPeriod, runAutofill } from "./schedule";
-import { saveDepartmentSettings, saveShiftType } from "./settings";
+import { saveDepartmentSettings, saveShiftType, saveStaffMember } from "./settings";
 
 // Hospital medicine pilot: the demo Department, Blocks and Auto-publish (.scratch/evenly-beta).
 const NOW = Date.parse("2026-11-16T15:00:00Z");
@@ -96,5 +96,28 @@ describe("on-call list for the hospital", () => {
     const rows = onCallRows(twoDays.entries);
     expect(rows).toHaveLength(4);
     expect(rows.every((r) => r.shift_id && r.staff_id && r.name !== "UNCOVERED")).toBe(true);
+  });
+});
+
+describe("Certifications", () => {
+  test("backdating a Certification's expiry lists the published Shifts it no longer qualifies for", async () => {
+    const [grace] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Grace Kim"));
+    // Re-judging covers published Shifts from today through 120 days ahead (other tests here publish March days too).
+    const snap = await loadSnapshot(db, admin.departmentId, "2026-11-17", addDays("2026-11-16", 120), { pad: 0, publishedOnly: true });
+    const graceProc = snap.shifts.filter((s) => s.label === "Procedure Service" && snap.ctx.assignments.some((a) => a.shiftId === s.id && a.staffId === grace.id));
+    const { newHardViolations } = await saveStaffMember(db, admin, {
+      id: grace.id, name: grace.name, clinicalRole: grace.clinicalRole, fte: grace.fte, tags: grace.tags, tagExpiry: { procedures: "2026-11-16" }, phone: grace.phone ?? "",
+    }, NOW);
+    expect(newHardViolations.length).toBe(graceProc.length);
+    expect(newHardViolations.every((v) => v.message.includes("procedures Certification expired on 2026-11-16"))).toBe(true);
+    const [after] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.id, grace.id));
+    expect(after.tagExpiry).toEqual({ procedures: "2026-11-16" });
+  });
+
+  test("the demo has one expired and one soon-expiring Certification", async () => {
+    const rows = await db.select().from(schema.staffMembers);
+    const dated = rows.filter((r) => r.tagExpiry.procedures).map((r) => [r.name, r.tagExpiry.procedures]).sort();
+    expect(dated).toContainEqual(["Dr. Sofia Reyes", "2026-11-06"]);
+    expect(dated).toContainEqual(["Dr. Daniel Okafor", "2026-12-06"]);
   });
 });
