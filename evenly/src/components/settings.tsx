@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { saveSettingsAction, saveShiftTypeAction, saveStaffAction } from "@/app/actions";
+import { importStaffAction, saveSettingsAction, saveShiftTypeAction, saveStaffAction } from "@/app/actions";
 import type { ThresholdRule } from "@/domain/types";
 import { useAction } from "@/components/use-action";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +125,12 @@ export function StaffEditor({ staff, readOnly, today }: { staff: StaffRow[]; rea
   const soon = addDaysLocal(today, 30);
   return (
     <>
-      {!readOnly && <Button variant="outline" size="sm" className="mb-3" onClick={() => open()}><Plus /> Add Staff Member</Button>}
+      {!readOnly && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => open()}><Plus /> Add Staff Member</Button>
+          <StaffImport />
+        </div>
+      )}
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {staff.map((s) => (
           <li key={s.id} className="flex items-start justify-between gap-2 rounded-md border p-3">
@@ -291,4 +296,50 @@ function addDaysLocal(date: string, n: number): string {
   const d = new Date(date + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
+}
+
+const IMPORT_EXAMPLE = `Name,Email,Clinical Role,FTE,Tags
+Dr. Ada Park,ada.park@hospital.org,physician,1,md; procedures:2027-03-31
+Sam Lee,sam.lee@hospital.org,NP,0.8,app`;
+
+/** Import Staff Members from a spreadsheet saved as CSV: paste it or choose the file. */
+function StaffImport() {
+  const { pending, run } = useAction();
+  const [openDialog, setOpenDialog] = useState(false);
+  const [text, setText] = useState("");
+  const [skipped, setSkipped] = useState<{ line: number; message: string }[]>([]);
+  return (
+    <>
+      <Button variant="outline" size="sm" onClick={() => { setOpenDialog(true); setSkipped([]); }}>Import from spreadsheet</Button>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader><DialogTitle>Import staff</DialogTitle></DialogHeader>
+          <form className="grid gap-3" onSubmit={(e) => {
+            e.preventDefault();
+            run(() => importStaffAction(text), (r) => {
+              const errors = r?.errors ?? [];
+              setSkipped(errors);
+              warnRejudged(r);
+              if (!errors.length) setOpenDialog(false);
+            });
+          }}>
+            <p className="text-sm text-muted-foreground">
+              Save your sheet as CSV with a header row. Columns: Name and Email (required), Clinical Role, FTE, Tags. Separate Tags with &ldquo;;&rdquo; and add a Certification&apos;s expiry as <code>tag:YYYY-MM-DD</code>. People are matched by email: existing ones are updated, new ones are added and can sign in.
+            </p>
+            <Input type="file" accept=".csv,text/csv" aria-label="CSV file"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then(setText); }} />
+            <textarea aria-label="CSV text" className="min-h-40 rounded-md border bg-background p-2 font-mono text-xs" placeholder={IMPORT_EXAMPLE}
+              value={text} onChange={(e) => setText(e.target.value)} />
+            {skipped.length > 0 && (
+              <div className="rounded-md border border-destructive/40 p-2 text-sm" role="alert">
+                <p className="font-medium">Skipped rows</p>
+                <ul className="mt-1 grid gap-0.5 text-muted-foreground">{skipped.map((e) => <li key={e.line}>Line {e.line}: {e.message}</li>)}</ul>
+              </div>
+            )}
+            <DialogFooter><Button disabled={pending || !text.trim()}>Import</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

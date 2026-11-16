@@ -186,3 +186,7 @@ export async function saveShiftTypeAction(input: unknown) {
 export async function saveChannelSettingsAction(input: unknown) {
   return run((db, a) => inbox.saveChannelSettings(db, a, input), () => "Notification settings saved");
 }
+
+export async function importStaffAction(csv: string) {
+  return run((db, a) => settings.importStaff(db, a, csv), (r) => `Imported staff: ${r.created} added, ${r.updated} updated${r.errors.length ? `, ${r.errors.length} rows skipped` : ""}`);
+}

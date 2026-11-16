@@ -1,3 +1,4 @@
+import { parseStaffCsv } from "@/domain/staff-import";
 import { DEFAULT_RULES } from "@/domain/types";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -105,6 +106,39 @@ export async function saveStaffMember(db: DB, actor: Actor, input: unknown, now 
   });
   await audit(db, actor, "staff.save", `Saved Staff Member ${s.name}${newHardViolations.length ? `; ${brokenAssignmentsPhrase(newHardViolations.length)}` : ""}`, { tags, tagExpiry, fte: s.fte });
   return { newHardViolations };
+}
+
+/**
+ * Import Staff Members from CSV text (beta ticket 09): upsert by email within the Department, give each new
+ * person a staff User so they can sign in, and re-judge published Shifts once for the whole import.
+ */
+export async function importStaff(db: DB, actor: Actor, csv: unknown, now = currentInstant()) {
+  require(actor, "config:edit");
+  const text = z.string().max(500_000, "The file is too large (500 KB at most)").parse(csv);
+  const { rows, errors } = parseStaffCsv(text);
+  let created = 0, updated = 0;
+  const newHardViolations = await rejudge(db, actor, now, async () => {
+    const existing = await db.select().from(schema.staffMembers)
+      .where(and(eq(schema.staffMembers.departmentId, actor.departmentId), eq(schema.staffMembers.organizationId, actor.organizationId)));
+    const takenEmails = new Set((await db.select({ email: schema.users.email }).from(schema.users)).map((u) => u.email.toLowerCase()));
+    for (const r of rows) {
+      const match = existing.find((m) => m.email?.toLowerCase() === r.email);
+      const values = { name: r.name, clinicalRole: r.clinicalRole, fte: r.fte, tags: r.tags, tagExpiry: r.tagExpiry };
+      if (match) {
+        await db.update(schema.staffMembers).set(values).where(eq(schema.staffMembers.id, match.id));
+        updated++;
+        continue;
+      }
+      const [m] = await db.insert(schema.staffMembers).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, email: r.email, ...values }).returning();
+      if (!takenEmails.has(r.email)) {
+        await db.insert(schema.users).values({ organizationId: actor.organizationId, departmentId: actor.departmentId, name: r.name, email: r.email, permission: "staff", staffMemberId: m.id });
+        takenEmails.add(r.email);
+      }
+      created++;
+    }
+  });
+  await audit(db, actor, "staff.import", `Imported staff: ${created} added, ${updated} updated, ${errors.length} rows skipped`, { errors });
+  return { created, updated, errors, newHardViolations };
 }
 
 export async function listStaff(db: DB, actor: Actor) {

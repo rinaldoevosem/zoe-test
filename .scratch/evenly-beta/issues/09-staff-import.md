@@ -1,7 +1,7 @@
 # 09: Import Staff Members from a spreadsheet
 
 Type: AFK
-Status: open
+Status: done
 Blocked by: 03
 Spec: [beta spec](../spec.md)
 
@@ -11,5 +11,5 @@ CSV import in Settings: parse in a pure module, upsert by email, report skipped 
 
 ## Acceptance criteria
 
-- [ ] A valid CSV creates and updates Staff Members including Tag expiry dates
-- [ ] Bad rows are reported with their line number and reason
+- [x] A valid CSV creates and updates Staff Members including Tag expiry dates
+- [x] Bad rows are reported with their line number and reason

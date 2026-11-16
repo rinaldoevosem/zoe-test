@@ -8,7 +8,7 @@ import { getDepartment, loadSnapshot } from "../repo";
 import type { Actor } from "./common";
 import { onCallRows, whosOnCall } from "./oncall";
 import { assignBlock, createPeriod, runAutofill } from "./schedule";
-import { saveDepartmentSettings, saveShiftType, saveStaffMember } from "./settings";
+import { importStaff, saveDepartmentSettings, saveShiftType, saveStaffMember } from "./settings";
 
 // Hospital medicine pilot: the demo Department, Blocks and Auto-publish (.scratch/evenly-beta).
 const NOW = Date.parse("2026-11-16T15:00:00Z");
@@ -144,5 +144,29 @@ describe("Assign a Block", () => {
     await expect(assignBlock(db, scheduler, dec5Admit.id, leo.id, 3)).rejects.toThrow(/2026-12-05 breaks a Hard Rule/);
     const after = await loadSnapshot(db, scheduler.departmentId, "2026-12-05", "2026-12-07", { pad: 0 });
     expect(after.ctx.assignments.filter((a) => a.staffId === leo.id)).toHaveLength(3);
+  });
+});
+
+describe("Staff import", () => {
+  test("adds new people with a sign-in, updates existing ones by email and reports skipped rows", async () => {
+    const csv = [
+      "Name,Email,Clinical Role,FTE,Tags",
+      'Dr. Ada Park,ada.park@riverside.example,physician,1,"md; procedures:2027-06-30"',
+      "Dr. Leo Martins,LEO.MARTINS@riverside.example,physician,0.5,md",
+      "No Email,,physician,1,md",
+    ].join("\n");
+    const r = await importStaff(db, admin, csv, NOW);
+    expect([r.created, r.updated]).toEqual([1, 1]);
+    expect(r.errors).toEqual([{ line: 4, message: 'Email "" doesn\'t look like an email address' }]);
+    const [ada] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.email, "ada.park@riverside.example"));
+    expect(ada.tagExpiry).toEqual({ procedures: "2027-06-30" });
+    const [adaUser] = await db.select().from(schema.users).where(eq(schema.users.staffMemberId, ada.id));
+    expect(adaUser.permission).toBe("staff");
+    const [leo] = await db.select().from(schema.staffMembers).where(eq(schema.staffMembers.name, "Dr. Leo Martins"));
+    expect(leo.fte).toBe(0.5);
+  });
+
+  test("only admins can import", async () => {
+    await expect(importStaff(db, scheduler, "name,email\nX,x@y.example", NOW)).rejects.toThrow(/permission/);
   });
 });
