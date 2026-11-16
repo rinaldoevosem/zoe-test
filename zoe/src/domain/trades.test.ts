@@ -62,6 +62,12 @@ describe("Trade Requests", () => {
     expect(openTrade({ kind: "pickup", requesterId: "cy", shiftId: "tue" }, base, "auto")).toMatchObject({ ok: false, error: "This Shift is already covered" });
   });
 
+  test("a Swap where either person is already on the other's Shift is refused", () => {
+    const both = { ...base, shifts: [...base.shifts, shift("or", "2026-01-08", { headcount: 2 })], assignments: [...base.assignments, { shiftId: "or", staffId: "ana" }, { shiftId: "or", staffId: "bo" }] };
+    expect(openTrade({ ...swap, shiftId: "or", counterpartyShiftId: "or" }, both, "auto")).toMatchObject({ ok: false, error: "You're both already on that Shift" });
+    expect(openTrade({ ...swap, shiftId: "or", counterpartyShiftId: "tue" }, both, "auto")).toMatchObject({ ok: false, error: "bo is already on that Shift" });
+  });
+
   test("you can only trade your own Assignment", () => {
     expect(openTrade({ ...swap, requesterId: "cy" }, base, "auto").ok).toBe(false);
   });

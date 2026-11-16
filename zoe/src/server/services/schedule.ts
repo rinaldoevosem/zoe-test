@@ -85,7 +85,8 @@ export async function candidatesFor(db: DB, actor: Actor, shiftId: string): Prom
   return snap.ctx.staff
     .filter((m) => !snap.ctx.assignments.some((a) => a.shiftId === shift.id && a.staffId === m.id))
     .map((m) => {
-      const vs = checkAssignment(snap.ctx, { shiftId: shift.id, staffId: m.id });
+      // Headcount is shown separately (the Shift is full); judge each person on their own Rules.
+      const vs = checkAssignment(snap.ctx, { shiftId: shift.id, staffId: m.id }).filter((v) => v.rule !== "headcount");
       return { staffId: m.id, name: m.name, clinicalRole: m.clinicalRole, fte: m.fte, load: loads.get(m.id) ?? 0, violations: vs, blocked: hasHard(vs), penalty: totalPenalty(vs) };
     })
     .sort((a, b) => Number(a.blocked) - Number(b.blocked) || a.load - b.load || a.penalty - b.penalty || a.name.localeCompare(b.name));

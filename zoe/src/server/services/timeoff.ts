@@ -4,7 +4,7 @@ import { schema, type DB } from "../db";
 import { getDepartment, loadSnapshot } from "../repo";
 import { audit, DomainError, notify, require, staffNames, type Actor } from "./common";
 
-const { timeOffRequests, staffMembers, users } = schema;
+const { timeOffRequests, staffMembers } = schema;
 
 export async function listTimeOff(db: DB, actor: Actor, scope: "mine" | "department") {
   const where = scope === "mine"
@@ -87,4 +87,4 @@ export async function decideTimeOff(db: DB, actor: Actor, requestId: string, dec
   return { conflicts };
 }
 
-export type { users };
+

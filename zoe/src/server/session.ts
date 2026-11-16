@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getDb, schema } from "./db";
 import type { Actor } from "./services/common";
 
@@ -24,6 +25,8 @@ export async function signOut() {
 }
 
 export async function getSession(): Promise<Actor | null> {
+  // Session-derived pages always render at request time (they read the database and the clock).
+  await connection();
   const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return null;
   const [userId, sig] = raw.split(".");

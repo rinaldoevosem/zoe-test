@@ -68,9 +68,21 @@ export function previewTrade(trade: Trade, ctx: ScheduleContext): { change: Assi
   if (!change) return { change, violations: [] };
   const missing = change.remove.find((r) => !ctx.assignments.some((a) => a.shiftId === r.shiftId && a.staffId === r.staffId));
   if (missing) return { change, violations: [], error: "The schedule changed: an Assignment in this trade no longer exists" };
+  const pointless = pointlessSwap(trade, ctx);
+  if (pointless) return { change, violations: [], error: pointless };
   const before = evaluate(ctx);
   const after = evaluate({ ...ctx, assignments: applyChange(ctx.assignments, change) });
   return { change, violations: newViolations(before, after) };
+}
+
+/** A Swap that would change nothing, or put someone on a Shift they already hold. */
+function pointlessSwap(t: Trade, ctx: ScheduleContext): string | null {
+  if (t.kind !== "swap" || !t.counterpartyId || !t.counterpartyShiftId) return null;
+  if (t.shiftId === t.counterpartyShiftId) return "You're both already on that Shift";
+  const on = (staffId: StaffId, shiftId: ShiftId) => ctx.assignments.some((a) => a.staffId === staffId && a.shiftId === shiftId);
+  if (on(t.counterpartyId, t.shiftId)) return `${ctx.staff.find((m) => m.id === t.counterpartyId)?.name ?? "They"} is already on that Shift`;
+  if (on(t.requesterId, t.counterpartyShiftId)) return "You're already on that Shift";
+  return null;
 }
 
 export function openTrade(trade: Omit<Trade, "status">, ctx: ScheduleContext, policy: TradePolicy): TransitionResult {

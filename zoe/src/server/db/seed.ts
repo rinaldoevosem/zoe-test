@@ -38,7 +38,7 @@ const SHIFT_TYPES = [
 export async function ensureSeeded(db: DB) {
   const existing = await db.select({ id: schema.organizations.id }).from(schema.organizations).limit(1);
   if (existing.length) return;
-  await seed(db, Date.now());
+  await seed(db, (await import("../clock")).currentInstant());
 }
 
 export async function seed(db: DB, now: number) {
