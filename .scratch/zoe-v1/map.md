@@ -22,6 +22,7 @@ A **locked v1 spec** — every decision needed to take Zoe live in **one pilot c
 - [Research: compliance for scheduling data](issues/05-compliance-hosting-research.md): schedules aren't PHI; stay PHI-free by design; SOC 2 Type II is the buyer norm; v1 needs SSO+MFA, audit, encryption, US hosting, one pen test.
 - [Research: payroll & HCM export formats](issues/08-payroll-export-research.md): export one row per employee × date × pay code with amount/units (physician stipends), mapped per Department; overtime stays in hospital timekeeping.
 - [Research: hospital identity providers & SSO](issues/06-sso-idp-research.md): plan for Entra ID + Imprivata; SAML first; Better Auth SSO/SCIM plugins suffice for v1 (WorkOS fallback); long sliding sessions; locums via guest/federation or email-code + MFA.
+- [Research: Epic / paging / clinical-comms integration paths](issues/07-ehr-paging-integration-research.md): Epic On-Call Finder takes a CSV over SFTP (no certification); paging vendors poll a 48h feed; v1 needs a 48h JSON+CSV on-call feed with stable IDs, change webhooks and an offline on-call fallback.
 - [Provisional ADRs 0001–0008](../../docs/adr/): agent-decided under delegated ownership; **re-opened** by "Confirm or overturn the provisional ADRs".
 
 ## Not yet specified
@@ -31,7 +32,7 @@ A **locked v1 spec** — every decision needed to take Zoe live in **one pilot c
 - **Compensation / productivity (wRVU)**: whether schedule data must feed compensation; unknown until the business model is set.
 - **Pay-code model**: payroll research shows exports need a per-Department pay-code mapping (call stipends, per-shift rates, differentials); becomes a ticket once integration scope and the pilot's timekeeping system are known.
 - **Public API & webhooks**: shape and auth, once integration scope is known.
-- **Support & SLAs**: uptime targets, downtime fallback for Who's On Call (printable/offline copy).
+- **Support & SLAs**: uptime targets; integration research confirms a static/cacheable Who's On Call fallback is expected.
 - **Internationalisation**: languages, non-US labour rules — only if the pilot is outside the US.
 
 ## Out of scope
