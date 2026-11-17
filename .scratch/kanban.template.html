@@ -1,0 +1,122 @@
+<title>Evenly Ticket Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: four status lanes side by side on wide screens, stacked on phones; filter chips by tracker above. */
+:root {
+  --bg: #f3f6f5;
+  --surface: #ffffff;
+  --ink: #13211f;
+  --muted: #5a6b68;
+  --line: #d8e2df;
+  --accent: #0f766e;
+  --you: #b45309;
+  --you-soft: #fdf0dc;
+  --ready: #0f766e;
+  --ready-soft: #ddf1ee;
+  --blocked: #8a6b62;
+  --blocked-soft: #efe7e4;
+  --done: #4b5f5b;
+  --done-soft: #e7eceb;
+  --beta: #0f766e;
+  --v1: #6d4fc2;
+  --v0: #57636b;
+  --font-display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1716; --surface: #152321; --ink: #e5eeec; --muted: #9bb0ac; --line: #263f3b; --accent: #3fbfae;
+    --you: #f3b45f; --you-soft: #3a2a12; --ready: #4cc9b7; --ready-soft: #143632; --blocked: #c5a89e; --blocked-soft: #33272383;
+    --done: #a7b7b4; --done-soft: #1d2b29; --beta: #4cc9b7; --v1: #b39cff; --v0: #a9b6bd;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1716; --surface: #152321; --ink: #e5eeec; --muted: #9bb0ac; --line: #263f3b; --accent: #3fbfae;
+  --you: #f3b45f; --you-soft: #3a2a12; --ready: #4cc9b7; --ready-soft: #143632; --blocked: #c5a89e; --blocked-soft: #33272383;
+  --done: #a7b7b4; --done-soft: #1d2b29; --beta: #4cc9b7; --v1: #b39cff; --v0: #a9b6bd;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 400 14px/1.5 var(--font-body); }
+.wrap { max-width: 1400px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px 48px; display: grid; gap: 18px; }
+h1, h2 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(1.5rem, 3.4vw, 2rem); font-weight: 800; letter-spacing: -0.02em; }
+.top { display: grid; gap: 6px; }
+.top p { margin: 0; color: var(--muted); max-width: 70ch; }
+.brand { font: 800 0.95rem var(--font-display); color: var(--accent); letter-spacing: -0.01em; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filter { font: 500 0.88rem var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.filter b { font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; margin-left: 2px; }
+.filter[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filter[aria-pressed="true"] b { color: var(--bg); }
+.filter:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+.col { min-width: 0; border-radius: 14px; padding: 12px; display: grid; gap: 10px; border-top: 4px solid var(--lane); background: var(--lane-soft); }
+.col-you { --lane: var(--you); --lane-soft: var(--you-soft); }
+.col-ready { --lane: var(--ready); --lane-soft: var(--ready-soft); }
+.col-blocked { --lane: var(--blocked); --lane-soft: var(--blocked-soft); }
+.col-done { --lane: var(--done); --lane-soft: var(--done-soft); }
+.col header { display: grid; gap: 2px; }
+.col h2 { font-size: 1.02rem; font-weight: 700; display: flex; align-items: baseline; gap: 8px; }
+.col header p { margin: 0; color: var(--muted); font-size: 0.82rem; }
+.count { font: 600 0.8rem var(--font-body); color: var(--lane); font-variant-numeric: tabular-nums; }
+.col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 5px; min-width: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: 600 0.7rem var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.proj { border-color: transparent; color: var(--surface); }
+.proj-beta { background: var(--beta); }
+.proj-v1 { background: var(--v1); }
+.proj-v0 { background: var(--v0); }
+.title { font-weight: 600; color: var(--ink); text-decoration: none; overflow-wrap: anywhere; }
+.title:hover { text-decoration: underline; text-underline-offset: 2px; }
+.wait { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--blocked); }
+.sum { margin: 0; font-size: 0.82rem; color: var(--muted); overflow-wrap: anywhere; }
+.col-done .sum { display: none; }
+.col-done .card { padding-block: 8px; }
+.empty { color: var(--muted); font-size: 0.85rem; padding: 6px 2px; }
+footer { color: var(--muted); font-size: 0.8rem; }
+footer code { font-size: 0.78rem; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="brand">Evenly</span>
+    <h1>Ticket board</h1>
+    <p>Every ticket from the v0 prototype, the v1 decision map and the beta build, sorted by what happens next. Tap a title to open the ticket.</p>
+  </header>
+  <nav class="filters" aria-label="Filter by tracker">{{FILTERS}}</nav>
+  <main class="board">{{COLUMNS}}</main>
+  <footer>Generated {{DATE}} from <code>.scratch/*/issues/*.md</code> by <code>.scratch/render_kanban.py</code>. The tickets are the source of truth: edit them and regenerate.</footer>
+</div>
+
+<script>
+(() => {
+  const KEY = "evenly-board-filter";
+  const buttons = [...document.querySelectorAll(".filter")];
+  const apply = (which) => {
+    buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === which)));
+    document.querySelectorAll(".col").forEach((col) => {
+      let shown = 0;
+      col.querySelectorAll(".card").forEach((c) => {
+        const show = which === "all" || c.dataset.project === which;
+        c.hidden = !show;
+        if (show) shown++;
+      });
+      col.querySelector(".count").textContent = shown;
+      let empty = col.querySelector(".empty");
+      if (!shown && !empty) { empty = document.createElement("li"); empty.className = "empty"; empty.textContent = "Nothing here."; col.querySelector("ul").append(empty); }
+      if (empty) empty.hidden = shown > 0;
+    });
+    try { localStorage.setItem(KEY, which); } catch (e) {}
+  };
+  buttons.forEach((b) => b.addEventListener("click", () => apply(b.dataset.filter)));
+  let saved = "all";
+  try { saved = localStorage.getItem(KEY) || "all"; } catch (e) {}
+  apply(buttons.some((b) => b.dataset.filter === saved) ? saved : "all");
+})();
+</script>

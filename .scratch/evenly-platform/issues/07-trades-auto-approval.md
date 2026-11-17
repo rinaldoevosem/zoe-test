@@ -4,4 +4,4 @@
 
 **Blocked by:** 02, 05
 
-**Status:** ready-for-agent
+**Status:** done (v0 prototype, shipped)

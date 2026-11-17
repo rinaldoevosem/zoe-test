@@ -4,7 +4,7 @@
 
 **Blocked by:** 02, 03
 
-**Status:** ready-for-agent
+**Status:** done (v0 prototype, shipped)
 
-- [ ] Same input → same output
-- [ ] Never produces a Hard Violation
+- [x] Same input → same output
+- [x] Never produces a Hard Violation

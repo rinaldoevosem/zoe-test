@@ -4,7 +4,7 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (v0 prototype, shipped)
 
-- [ ] Tests at the `evaluate`/`checkAssignment` interface for every Rule kind
-- [ ] DST night measured on real instants
+- [x] Tests at the `evaluate`/`checkAssignment` interface for every Rule kind
+- [x] DST night measured on real instants

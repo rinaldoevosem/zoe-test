@@ -5,3 +5,7 @@
 **Blocked by:** 12
 
 **Status:** needs-triage
+
+## Comments
+
+- 2026-11-17: Certification expiry gating shipped in beta 03; Blocks (a rotation pattern) in beta 01 and 06. The rest stays backlog.

@@ -4,4 +4,4 @@
 
 **Blocked by:** 01
 
-**Status:** ready-for-agent — partially done: Staff and Rule settings shipped; Shift Type CRUD moved to 16
+**Status:** done (v0 prototype, shipped; Shift Type editing finished in 16)

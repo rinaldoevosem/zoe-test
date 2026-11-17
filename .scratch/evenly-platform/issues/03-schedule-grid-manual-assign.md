@@ -4,7 +4,7 @@
 
 **Blocked by:** 01, 02
 
-**Status:** ready-for-agent
+**Status:** done (v0 prototype, shipped)
 
-- [ ] Assign path calls rules before writing
-- [ ] Audit Event written for every change
+- [x] Assign path calls rules before writing
+- [x] Audit Event written for every change

@@ -4,8 +4,8 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done (v0 prototype, shipped)
 
-- [ ] Zero-config start on PGlite; `DATABASE_URL` switches to Postgres
-- [ ] Every table has organization_id
-- [ ] Sign-in-as picker sets a long-lived session cookie
+- [x] Zero-config start on PGlite; `DATABASE_URL` switches to Postgres
+- [x] Every table has organization_id
+- [x] Sign-in-as picker sets a long-lived session cookie
